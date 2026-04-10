@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HAL</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://res.cdn.office.net/teams-js/2.0.0/js/MicrosoftTeams.min.js" crossorigin="anonymous"></script>
+  <script src="hal.config.example.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="quick-links-panel">
+      <div class="brand-lockup">
+        <button class="hal-mark hal-mic-button" id="toggleRecording" type="button" aria-pressed="false" aria-label="Start microphone">
+          <span class="hal-eye-outer"><span class="hal-eye-inner"></span></span>
+        </button>
+        <div>
+          <p class="eyebrow">HAL</p>
+        </div>
+      </div>
+
+      <nav id="quickLinks" class="quick-links-list"></nav>
+      <button class="icon-add-button" id="addQuickLink" type="button">+</button>
+      <p class="sidebar-note">Right-click a link to remove it.</p>
+    </aside>
+
+    <main class="main-content">
+      <section class="primary-grid">
+        <div class="stack-column">
+          <div class="command-panel">
+            <div class="command-panel-header">
+              <div class="command-status-wrap">
+                <p class="mic-status" id="micStatus">Tap the HAL eye or type below.</p>
+                <p class="mic-support-note hidden" id="micSupportNote">Checking microphone support...</p>
+              </div>
+              <div class="top-controls">
+                <button class="ghost-button compact-ghost-button topbar-backup-button" id="openBackups" type="button">Backups</button>
+                <button class="theme-toggle reminder-toggle-icon" id="openReminders" type="button" aria-label="Open reminders" title="Open reminders">
+                  <svg class="topbar-icon bell-svg" aria-hidden="true" viewBox="0 0 16 16">
+                    <path d="M5.2 6.5a2.8 2.8 0 1 1 5.6 0v2c0 .7.2 1.3.7 1.9H4.5c.5-.6.7-1.2.7-1.9z"></path>
+                    <path d="M6.3 12.1h3.4"></path>
+                    <path d="M7.2 12.1a.8.8 0 0 0 1.6 0"></path>
+                  </svg>
+                </button>
+                <button class="theme-toggle voice-toggle-icon" id="voiceToggle" type="button" aria-label="Toggle spoken responses">
+                  <svg class="topbar-icon speaker-svg" id="voiceToggleGlyph" aria-hidden="true" viewBox="0 0 16 16">
+                    <path d="M3.5 6.2h2.4L9 3.8v8.4L5.9 9.8H3.5z"></path>
+                    <path d="M10.6 6a2.7 2.7 0 0 1 0 4"></path>
+                    <path d="M12.1 4.6a4.6 4.6 0 0 1 0 6.8"></path>
+                  </svg>
+                </button>
+                <button class="theme-toggle theme-toggle-icon" id="themeToggle" type="button" aria-label="Toggle theme">
+                  <span class="theme-toggle-glyph" id="themeToggleGlyph" aria-hidden="true"></span>
+                </button>
+              </div>
+            </div>
+            <form id="captureForm" class="capture-form command-capture-form">
+              <button class="primary-button compact-save-button" type="submit" aria-label="Save prompt" title="Save prompt">
+                <span class="check-icon" aria-hidden="true"></span>
+              </button>
+              <textarea id="content" name="content" rows="2" placeholder='Example: "Create a task for me to follow up with Sarah tomorrow"'></textarea>
+            </form>
+          </div>
+
+          <section class="widget subdued-panel meeting-widget">
+            <div class="widget-header">
+              <div>
+                <p class="eyebrow">Meeting Notes</p>
+              </div>
+              <div class="dialog-actions">
+                <button class="ghost-button compact-icon-button" id="openNewMeetingNote" type="button" aria-label="Create meeting note" title="Create meeting note">+</button>
+                <button class="ghost-button compact-ghost-button" id="openMeetingNotesDialog" type="button">Open</button>
+                <button class="search-mic-button" data-target="meetingSearch" type="button" aria-label="Voice search meeting notes"></button>
+              </div>
+            </div>
+            <div class="widget-toolbar">
+              <input id="meetingSearch" type="search" placeholder="Search meeting notes">
+            </div>
+            <div id="meetingList" class="card-list"></div>
+          </section>
+
+          <section class="widget subdued-panel ideas-widget">
+            <div class="widget-header">
+              <div>
+                <p class="eyebrow">Ideas</p>
+              </div>
+              <div class="dialog-actions">
+                <button class="ghost-button compact-icon-button" id="openNewIdea" type="button" aria-label="Create idea" title="Create idea">+</button>
+                <button class="ghost-button compact-ghost-button" id="openIdeasDialog" type="button">Open</button>
+                <button class="search-mic-button" data-target="ideasSearch" type="button" aria-label="Voice search ideas"></button>
+              </div>
+            </div>
+            <div class="widget-toolbar">
+              <input id="ideasSearch" type="search" placeholder="Search ideas">
+              <label class="toggle-label">
+                <input id="showArchivedIdeas" type="checkbox">
+                Show archived
+              </label>
+            </div>
+            <div id="ideasList" class="card-list"></div>
+          </section>
+        </div>
+
+        <div class="stack-column">
+          <div class="quote-panel">
+            <div class="quote-row">
+              <p id="quoteText" class="quote-text"></p>
+              <button class="quote-edit-button" id="editQuote" type="button" aria-label="Edit quote">
+                <span class="pencil-icon" aria-hidden="true"></span>
+              </button>
+            </div>
+          </div>
+
+          <section class="widget subdued-panel my-day-widget">
+            <div class="widget-header">
+              <div>
+                <p class="eyebrow">My Day</p>
+              </div>
+              <button class="icon-button" id="openMyDaySettings" type="button" aria-label="Open calendar settings" title="Schedule settings">
+                <span class="gear-icon" aria-hidden="true"></span>
+              </button>
+            </div>
+            <div class="widget-toolbar">
+              <input id="myDayDate" type="date">
+              <button class="ghost-button compact-ghost-button" id="syncOutlookCalendar" type="button">Connect Outlook</button>
+              <button class="ghost-button compact-icon-button" id="addCalendarEvent" type="button" aria-label="Add event" title="Add event">+</button>
+            </div>
+            <p class="dialog-note calendar-status-note" id="myDayCalendarStatus">My Day is showing local events only.</p>
+            <div class="widget-toolbar">
+              <button class="ghost-button compact-ghost-button" id="openPastDueTasks" type="button">Past due tasks</button>
+            </div>
+            <div class="my-day-columns expanded-my-day-columns">
+              <div class="my-day-column">
+                <h3 class="mini-heading">Schedule</h3>
+                <div id="myDayEvents" class="card-list compact-list"></div>
+              </div>
+              <div class="my-day-column">
+                <h3 class="mini-heading">Tasks</h3>
+                <div id="myDayTasks" class="card-list compact-list"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="widget subdued-panel tasks-widget">
+            <div class="widget-header">
+              <div>
+                <p class="eyebrow">Tasks</p>
+              </div>
+              <button class="search-mic-button" data-target="tasksSearch" type="button" aria-label="Voice search tasks"></button>
+            </div>
+            <form id="quickTaskForm" class="task-form-inline quick-task-form">
+              <select id="quickTaskListSelect" aria-label="Quick task list"></select>
+              <input id="quickTaskInput" type="text" maxlength="140" placeholder="Create a new task">
+              <button class="primary-button quick-task-submit" id="quickTaskSubmit" type="submit">Add task</button>
+              <input id="quickTaskDueDate" type="date">
+              <button class="ghost-button compact-ghost-button" id="openQuickTaskNoteEditor" type="button">Note</button>
+              <label class="icon-toggle" for="quickTaskHasTime" title="Set a due time">
+                <input id="quickTaskHasTime" type="checkbox">
+                <span class="clock-icon" aria-hidden="true"></span>
+              </label>
+              <input id="quickTaskDueTime" class="hidden" type="time">
+              <button class="ghost-button compact-ghost-button" id="openTaskListCreator" type="button">Add list</button>
+            </form>
+            <div id="taskListsWidget" class="card-list"></div>
+          </section>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <dialog id="remindersDialog" class="reminders-dialog">
+    <div class="dialog-header">
+      <div>
+        <p class="eyebrow">Reminders</p>
+      </div>
+      <div class="dialog-actions">
+        <button class="icon-button" id="openReminderSettings" type="button" aria-label="Open reminder settings" title="Settings">
+          <span class="gear-icon" aria-hidden="true"></span>
+        </button>
+        <button class="ghost-button" id="closeReminders" type="button">Close</button>
+      </div>
+    </div>
+    <form id="reminderForm" class="reminder-form">
+      <input id="reminderText" type="text" placeholder="Reminder text">
+      <input id="reminderDateTime" type="datetime-local">
+      <select id="reminderDelivery">
+        <option value="inApp">In app only</option>
+        <option value="teams">Teams notification</option>
+        <option value="sms">Text message</option>
+        <option value="both">In app + text message</option>
+        <option value="teamsSms">Teams + text message</option>
+      </select>
+      <select id="reminderFrequency">
+        <option value="once">One time</option>
+        <option value="recurring">Recurring</option>
+      </select>
+      <div id="reminderRecurringPanel" class="reminder-recurring-panel hidden">
+        <select id="reminderRecurringMode">
+          <option value="interval">Recur every...</option>
+          <option value="monthlyWeekday">Recur the...</option>
+        </select>
+        <div id="reminderIntervalRow" class="reminder-recurring-row">
+          <span class="reminder-inline-label">Recur every</span>
+          <select id="reminderRecurringInterval">
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="weekdays">Weekdays</option>
+            <option value="allDays">All days</option>
+          </select>
+        </div>
+        <div id="reminderMonthlyRow" class="reminder-recurring-row hidden">
+          <span class="reminder-inline-label">Recur the</span>
+          <select id="reminderMonthlyOrdinal">
+            <option value="first">First</option>
+            <option value="second">Second</option>
+            <option value="third">Third</option>
+            <option value="fourth">Fourth</option>
+          </select>
+          <select id="reminderMonthlyWeekday">
+            <option value="sunday">Sunday</option>
+            <option value="monday">Monday</option>
+            <option value="tuesday">Tuesday</option>
+            <option value="wednesday">Wednesday</option>
+            <option value="thursday">Thursday</option>
+            <option value="friday">Friday</option>
+            <option value="saturday">Saturday</option>
+          </select>
+          <span class="reminder-inline-label">of every month</span>
+        </div>
+      </div>
+      <div class="reminder-form-actions">
+        <button class="ghost-button hidden" id="cancelReminderEdit" type="button">Cancel</button>
+        <button class="primary-button" id="reminderSubmit" type="submit">Add reminder</button>
+      </div>
+    </form>
+    <div id="reminderList" class="card-list"></div>
+  </dialog>
+
+  <dialog id="reminderSettingsDialog" class="reminders-dialog">
+    <div class="dialog-header">
+      <div>
+        <p class="eyebrow">Reminder Settings</p>
+      </div>
+      <button class="ghost-button" id="closeReminderSettings" type="button">Close</button>
+    </div>
+    <section class="reminder-recurring-panel sms-settings-panel">
+      <div class="dialog-header-row">
+        <div>
+          <p class="eyebrow">Text Notifications</p>
+          <p class="dialog-note">Save your phone number now. HAL will use it once an SMS provider is connected.</p>
+        </div>
+        <span id="smsSettingsStatus" class="status-pill">Checking SMS status</span>
+      </div>
+      <div class="reminder-recurring-row">
+        <label class="inline-checkbox">
+          <input id="smsNotificationsEnabled" type="checkbox">
+          <span>Enable text notifications</span>
+        </label>
+      </div>
+      <div class="reminder-recurring-row">
+        <input id="smsPhone" type="tel" placeholder="Your mobile number">
+      </div>
+      <div class="reminder-form-actions">
+        <button class="ghost-button" id="saveSmsSettings" type="button">Save text settings</button>
+        <button class="ghost-button" id="sendSmsTest" type="button">Send test text</button>
+      </div>
+    </section>
+    <section class="reminder-recurring-panel sms-settings-panel">
+      <div class="dialog-header-row">
+        <div>
+          <p class="eyebrow">Teams Notifications</p>
+          <p class="dialog-note">HAL can send reminder notifications into Microsoft Teams once you're signed in and the HAL Teams app is installed.</p>
+        </div>
+        <span id="teamsSettingsStatus" class="status-pill">Checking Teams status</span>
+      </div>
+      <div class="reminder-recurring-row">
+        <label class="inline-checkbox">
+          <input id="teamsNotificationsEnabled" type="checkbox">
+          <span>Enable Teams notifications</span>
+        </label>
+      </div>
+      <div class="reminder-form-actions">
+        <button class="ghost-button" id="saveTeamsSettings" type="button">Save Teams settings</button>
+        <button class="ghost-button" id="sendTeamsTest" type="button">Send test Teams notification</button>
+      </div>
+    </section>
+    <p class="dialog-note">HAL can now store reminder delivery preferences for Teams and SMS while the live provider connections are configured.</p>
+  </dialog>
+
+  <dialog id="backupDialog" class="reminders-dialog">
+    <div class="dialog-header">
+      <div>
+        <p class="eyebrow">Backups</p>
+        <h2>Protect Local HAL Data</h2>
+      </div>
+      <button class="ghost-button" id="closeBackups" type="button">Close</button>
+    </div>
+    <p class="dialog-note">Use a downloadable backup for portability and a local snapshot for an extra safety net before we take HAL online.</p>
+    <div class="backup-actions-grid">
+      <button class="ghost-button" id="downloadBackup" type="button">Download backup</button>
+      <button class="primary-button" id="saveLocalBackup" type="button">Create local snapshot</button>
+      <button class="ghost-button" id="restoreBackup" type="button">Restore backup</button>
+      <input id="restoreBackupInput" class="hidden" type="file" accept=".json,application/json">
+    </div>
+    <p class="dialog-note" id="backupStatus">Checking local snapshot status...</p>
+    <div class="backup-list-section">
+      <div class="dialog-header-row">
+        <p class="eyebrow">Recent Snapshots</p>
+      </div>
+      <div id="backupSnapshotList" class="card-list"></div>
+    </div>
+  </dialog>
+
+  <dialog id="myDaySettingsDialog" class="reminders-dialog">
+    <div class="dialog-header">
+      <div>
+        <p class="eyebrow">Schedule Settings</p>
+      </div>
+      <button class="ghost-button" id="closeMyDaySettings" type="button">Close</button>
+    </div>
+    <form id="myDaySettingsForm" class="reminder-form">
+      <p class="dialog-note">HAL is currently using the local <code>calendar_export.csv</code> file plus any manual events you add here.</p>
+      <p class="dialog-note">Refresh the browser or use the refresh button on My Day to pull in the latest exported schedule.</p>
+      <div class="reminder-form-actions">
+        <button class="ghost-button" id="saveMyDaySettings" type="submit">Done</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="tasksDialog" class="reminders-dialog tasks-dialog">
+    <div class="dialog-header">
+      <div>
+        <p class="eyebrow">Tasks</p>
+        <h2 id="tasksDialogTitle">Regular Tasks</h2>
+      </div>
+      <div class="dialog-actions">
+        <button class="ghost-button" id="toggleCompletedTasks" type="button">Completed</button>
+        <button class="ghost-button" id="closeTasksDialog" type="button">Close</button>
+      </div>
+    </div>
+    <div class="widget-toolbar tasks-filter-row">
+      <input id="tasksSearch" type="search" placeholder="Search tasks">
+      <input id="tasksDateFilter" type="date">
+      <button class="ghost-button compact-icon-button" id="clearTasksDateFilter" type="button" aria-label="Clear task date filter" title="Clear task date filter">
+        <span class="x-icon" aria-hidden="true"></span>
+      </button>
+    </div>
+    <form id="taskForm" class="task-form-inline task-dialog-form">
+      <select id="taskListSelect" aria-label="Task list"></select>
+      <input id="taskInput" type="text" maxlength="140" placeholder="Add or edit a task">
+      <input id="taskDueDate" type="date">
+      <label class="icon-toggle" for="taskHasTime" title="Set a due time">
+        <input id="taskHasTime" type="checkbox">
+        <span class="clock-icon" aria-hidden="true"></span>
+      </label>
+      <input id="taskDueTime" class="hidden" type="time">
+      <button class="ghost-button hidden" id="cancelTaskEdit" type="button">Cancel</button>
+      <button class="primary-button" id="taskSubmit" type="submit">Add task</button>
+    </form>
+    <div id="tasksList" class="card-list"></div>
+    <div id="completedTasksList" class="card-list hidden"></div>
+  </dialog>
+
+  <dialog id="pastDueTasksDialog" class="reminders-dialog tasks-dialog">
+    <div class="dialog-header">
+      <div>
+        <p class="eyebrow">My Day</p>
+        <h2>Past Due Tasks</h2>
+      </div>
+      <button class="ghost-button" id="closePastDueTasksDialog" type="button">Close</button>
+    </div>
+    <div id="pastDueTasksList" class="card-list"></div>
+  </dialog>
+
+  <dialog id="taskNoteEditorDialog" class="reminders-dialog tasks-dialog">
+    <div class="dialog-header">
+      <div>
+        <p class="eyebrow">Task Notes</p>
+        <h2 id="taskNoteEditorTitle">Task Notes</h2>
+      </div>
+      <button class="ghost-button" id="closeTaskNoteEditorDialog" type="button">Close</button>
+    </div>
+    <form id="taskNoteEditorForm" class="reminder-form">
+      <div class="idea-editor-toolbar" id="taskNoteEditorToolbar">
+        <button class="ghost-button compact-ghost-button" id="taskNoteEditorFontButton" type="button">Font</button>
+        <button class="ghost-button compact-ghost-button" id="taskNoteEditorSizeButton" type="button">Size</button>
+        <button class="ghost-button compact-ghost-button" type="button" data-editor-command="bold"><strong>B</strong></button>
+        <button class="ghost-button compact-ghost-button" type="button" data-editor-command="italic"><em>I</em></button>
+        <button class="ghost-button compact-ghost-button" type="button" data-editor-command="underline"><span class="underline-label">U</span></button>
+        <button class="ghost-button compact-ghost-button" type="button" data-editor-command="insertUnorderedList">Bullets</button>
+        <button class="ghost-button compact-ghost-button" type="button" data-editor-command="removeFormat">Clear</button>
+      </div>
+      <div id="taskNoteEditorContent" class="rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Task notes"></div>
+      <div class="dialog-actions widget-toolbar-wrap">
+        <button class="primary-button" type="submit">Save task note</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="taskListDialog" class="reminders-dialog">
+    <div class="dialog-header">
+      <div>
+        <p class="eyebrow">Tasks</p>
+        <h2>New Task List</h2>
+      </div>
+      <button class="ghost-button" id="closeTaskListDialog" type="button">Close</button>
+    </div>
+    <form id="taskListForm" class="reminder-form">
+      <input id="newTaskListName" type="text" placeholder="Task list name">
+      <div class="dialog-actions widget-toolbar-wrap">
+        <button class="primary-button" id="createTaskList" type="submit">Create list</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="ideasDialog" class="reminders-dialog tasks-dialog">
+    <div class="dialog-header">
+      <div>
+        <p class="eyebrow">Ideas</p>
+        <h2>All Ideas</h2>
+      </div>
+      <div class="dialog-actions">
+        <button class="ghost-button compact-icon-button" id="openNewIdeaFromDialog" type="button" aria-label="Create idea" title="Create idea">+</button>
+        <button class="ghost-button" id="closeIdeasDialog" type="button">Close</button>
+      </div>
+    </div>
+    <div class="widget-toolbar ideas-dialog-toolbar">
+      <input id="ideasDialogSearch" type="search" placeholder="Search all ideas">
+      <button class="search-mic-button" data-target="ideasDialogSearch" type="button" aria-label="Voice search all ideas"></button>
+    </div>
+    <div id="ideasDialogList" class="card-list"></div>
+  </dialog>
+
+  <dialog id="ideaEditorDialog" class="reminders-dialog tasks-dialog">
+    <div class="dialog-header">
+      <div>
+        <p class="eyebrow">Idea</p>
+        <h2 id="ideaEditorTitle">Edit Idea</h2>
+      </div>
+      <button class="ghost-button" id="closeIdeaEditorDialog" type="button">Close</button>
+    </div>
+    <form id="ideaEditorForm" class="reminder-form">
+      <input id="ideaEditorName" type="text" placeholder="Idea title">
+      <div class="idea-editor-toolbar" id="ideaEditorToolbar">
+        <button class="ghost-button compact-ghost-button" id="ideaEditorFontButton" type="button">Font</button>
+        <button class="ghost-button compact-ghost-button" id="ideaEditorSizeButton" type="button">Size</button>
+        <button class="ghost-button compact-ghost-button" type="button" data-editor-command="bold"><strong>B</strong></button>
+        <button class="ghost-button compact-ghost-button" type="button" data-editor-command="italic"><em>I</em></button>
+        <button class="ghost-button compact-ghost-button" type="button" data-editor-command="underline"><span class="underline-label">U</span></button>
+        <button class="ghost-button compact-ghost-button" type="button" data-editor-command="insertUnorderedList">Bullets</button>
+        <button class="ghost-button compact-ghost-button" type="button" data-editor-command="removeFormat">Clear</button>
+      </div>
+      <div id="ideaEditorContent" class="rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Idea details"></div>
+      <div class="dialog-actions widget-toolbar-wrap">
+        <button class="ghost-button" id="archiveIdeaButton" type="button">Archive</button>
+        <button class="ghost-button" id="deleteIdeaButton" type="button">Delete</button>
+        <button class="ghost-button export-icon-button" id="exportIdeaWord" type="button" aria-label="Export to Word" title="Export to Word">
+          <span class="quick-link-glyph word" aria-hidden="true">W</span>
+        </button>
+        <button class="ghost-button export-icon-button" id="exportIdeaPowerPoint" type="button" aria-label="Export to PowerPoint" title="Export to PowerPoint">
+          <span class="quick-link-glyph powerpoint" aria-hidden="true">P</span>
+        </button>
+        <button class="ghost-button export-icon-button" id="exportIdeaExcel" type="button" aria-label="Export to Excel" title="Export to Excel">
+          <span class="quick-link-glyph excel" aria-hidden="true">X</span>
+        </button>
+        <button class="primary-button" type="submit">Save idea</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="meetingNotesDialog" class="reminders-dialog tasks-dialog">
+    <div class="dialog-header">
+      <div>
+        <p class="eyebrow">Meeting Notes</p>
+        <h2>All Meeting Notes</h2>
+      </div>
+      <button class="ghost-button" id="closeMeetingNotesDialog" type="button">Close</button>
+    </div>
+    <div id="meetingNotesDialogList" class="card-list"></div>
+  </dialog>
+
+  <dialog id="meetingNoteEditorDialog" class="reminders-dialog tasks-dialog">
+    <div class="dialog-header">
+      <div>
+        <p class="eyebrow">Meeting Note</p>
+        <h2 id="meetingNoteEditorTitle">Edit Meeting Note</h2>
+      </div>
+      <button class="ghost-button" id="closeMeetingNoteEditorDialog" type="button">Close</button>
+    </div>
+    <form id="meetingNoteEditorForm" class="reminder-form">
+      <input id="meetingNoteEditorName" type="text" placeholder="Meeting note title">
+      <input id="meetingNoteEditorDate" type="date">
+      <div class="idea-editor-toolbar" id="meetingNoteEditorToolbar">
+        <button class="ghost-button compact-ghost-button" id="meetingNoteEditorFontButton" type="button">Font</button>
+        <button class="ghost-button compact-ghost-button" id="meetingNoteEditorSizeButton" type="button">Size</button>
+        <button class="ghost-button compact-ghost-button" type="button" data-editor-command="bold"><strong>B</strong></button>
+        <button class="ghost-button compact-ghost-button" type="button" data-editor-command="italic"><em>I</em></button>
+        <button class="ghost-button compact-ghost-button" type="button" data-editor-command="underline"><span class="underline-label">U</span></button>
+        <button class="ghost-button compact-ghost-button" type="button" data-editor-command="insertUnorderedList">Bullets</button>
+        <button class="ghost-button compact-ghost-button" type="button" data-editor-command="removeFormat">Clear</button>
+      </div>
+      <div id="meetingNoteEditorContent" class="rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Meeting note details"></div>
+      <div class="dialog-actions widget-toolbar-wrap">
+        <button class="ghost-button hidden" id="deleteMeetingNoteButton" type="button">Delete</button>
+        <button class="primary-button" type="submit">Save meeting note</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>

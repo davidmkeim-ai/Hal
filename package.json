@@ -1,0 +1,21 @@
+{
+  "name": "hal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "HAL personal assistant with Microsoft Teams and Graph integration scaffolding.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "run-hal.cmd",
+    "start": "run-hal.cmd"
+  },
+  "dependencies": {
+    "@azure/msal-node": "^3.2.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-session": "^1.18.1",
+    "openai": "^6.6.0"
+  }
+}

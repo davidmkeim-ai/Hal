@@ -1,0 +1,57 @@
+services:
+  - type: web
+    name: hal
+    runtime: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: HAL_BASE_URL
+        sync: false
+      - key: HAL_TAB_PATH
+        value: /index.html
+      - key: HAL_DATA_ROOT
+        value: /opt/render/project/src/storage/data
+      - key: HAL_BACKUP_ROOT
+        value: /opt/render/project/src/storage/backups
+      - key: HAL_CSV_CALENDAR_PATH
+        value: /opt/render/project/src/storage/calendar/calendar_export.csv
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: HAL_AI_MODEL
+        value: gpt-5-mini
+      - key: ENTRA_CLIENT_ID
+        sync: false
+      - key: ENTRA_CLIENT_SECRET
+        sync: false
+      - key: ENTRA_TENANT_ID
+        value: common
+      - key: GRAPH_SCOPES
+        value: User.Read Calendars.ReadWrite TeamsActivity.Send offline_access openid profile
+      - key: HAL_TEAMS_MANIFEST_ID
+        sync: false
+      - key: HAL_TEAMS_TOPIC_URL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      - key: HAL_SMS_PROVIDER
+        sync: false
+      - key: HAL_SMS_FROM_NUMBER
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+    disk:
+      name: hal-storage
+      mountPath: /opt/render/project/src/storage
+      sizeGB: 5

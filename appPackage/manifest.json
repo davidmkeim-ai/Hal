@@ -1,0 +1,58 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "0.1.0",
+  "id": "11111111-1111-1111-1111-111111111111",
+  "developer": {
+    "name": "HAL",
+    "websiteUrl": "https://your-domain.example.com",
+    "privacyUrl": "https://your-domain.example.com/privacy",
+    "termsOfUseUrl": "https://your-domain.example.com/terms"
+  },
+  "name": {
+    "short": "HAL",
+    "full": "HAL Personal Assistant"
+  },
+  "description": {
+    "short": "Capture thoughts, organize work, and prepare for conversations.",
+    "full": "HAL helps you capture voice and text notes, organize checklists and call prep, and turn rough thinking into structured drafts inside Microsoft Teams."
+  },
+  "activities": {
+    "activityTypes": [
+      {
+        "type": "reminderTriggered",
+        "description": "Reminder from HAL",
+        "templateText": "{reminderText}"
+      }
+    ]
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#BC5C34",
+  "staticTabs": [
+    {
+      "entityId": "hal-home",
+      "name": "HAL",
+      "contentUrl": "https://your-domain.example.com/index.html",
+      "websiteUrl": "https://your-domain.example.com/index.html",
+      "scopes": [
+        "personal"
+      ]
+    }
+  ],
+  "permissions": [
+    "identity"
+  ],
+  "devicePermissions": [
+    "media"
+  ],
+  "validDomains": [
+    "your-domain.example.com"
+  ],
+  "webApplicationInfo": {
+    "id": "22222222-2222-2222-2222-222222222222",
+    "resource": "api://your-domain.example.com/22222222-2222-2222-2222-222222222222"
+  }
+}
