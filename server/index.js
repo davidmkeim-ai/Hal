@@ -20,6 +20,8 @@ const workspaceRoot = path.resolve(__dirname, "..");
 const backupsRoot = config.storage.backupsRoot;
 const HAL_AUTH_COOKIE = "hal.auth";
 const HAL_AUTH_COOKIE_VALUE = "v1";
+const SHORT_AUTH_MAX_AGE_MS = 1000 * 60 * 60 * 8;
+const REMEMBERED_AUTH_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
 const clientRootFiles = new Map([
   ["app.js", "app.js"],
   ["styles.css", "styles.css"],
@@ -41,7 +43,7 @@ app.use(
       httpOnly: true,
       sameSite: "lax",
       secure: config.baseUrl.startsWith("https://"),
-      maxAge: 1000 * 60 * 60 * 8,
+      maxAge: SHORT_AUTH_MAX_AGE_MS,
     },
   })
 );
@@ -74,6 +76,7 @@ app.get("/api/auth/status", async (request, response) => {
 
 app.post("/api/auth/login", async (request, response) => {
   const password = String(request.body?.password || "");
+  const rememberDevice = Boolean(request.body?.rememberDevice);
   if (!password) {
     response.status(400).json({
       error: "Enter the HAL password first.",
@@ -95,7 +98,7 @@ app.post("/api/auth/login", async (request, response) => {
       httpOnly: true,
       sameSite: "lax",
       secure: config.baseUrl.startsWith("https://"),
-      maxAge: 1000 * 60 * 60 * 8,
+      maxAge: rememberDevice ? REMEMBERED_AUTH_MAX_AGE_MS : SHORT_AUTH_MAX_AGE_MS,
       path: "/",
     });
     response.json({

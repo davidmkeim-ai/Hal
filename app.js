@@ -73,6 +73,7 @@ const elements = {
   authOverlay: document.querySelector("#authOverlay"),
   authForm: document.querySelector("#authForm"),
   authPassword: document.querySelector("#authPassword"),
+  authRememberDevice: document.querySelector("#authRememberDevice"),
   authStatus: document.querySelector("#authStatus"),
   authHelpText: document.querySelector("#authHelpText"),
   voiceToggle: document.querySelector("#voiceToggle"),
@@ -2506,6 +2507,7 @@ async function submitAuthForm(event) {
   }
 
   const password = elements.authPassword.value;
+  const rememberDevice = Boolean(elements.authRememberDevice?.checked);
   if (!password) {
     elements.authStatus.textContent = "Enter your password first.";
     return;
@@ -2517,7 +2519,7 @@ async function submitAuthForm(event) {
     const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ password, rememberDevice }),
     });
     const payload = await response.json();
     if (!response.ok) {
@@ -2525,6 +2527,9 @@ async function submitAuthForm(event) {
     }
 
     elements.authPassword.value = "";
+    if (elements.authRememberDevice) {
+      elements.authRememberDevice.checked = false;
+    }
     authState.authenticated = true;
     authState.checked = true;
     authState.passwordConfigured = payload.status?.passwordConfigured !== false;
