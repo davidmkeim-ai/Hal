@@ -48,7 +48,23 @@ app.use(
   })
 );
 
-app.use(express.static(workspaceRoot));
+app.use(
+  express.static(workspaceRoot, {
+    setHeaders(response, filePath) {
+      const normalizedPath = String(filePath || "").replace(/\\/g, "/");
+      const shouldDisableCache =
+        normalizedPath.endsWith("/index.html") ||
+        normalizedPath.endsWith("/app.js") ||
+        normalizedPath.endsWith("/styles.css") ||
+        normalizedPath.endsWith("/favicon.svg") ||
+        normalizedPath.endsWith("/hal.config.example.js");
+
+      if (shouldDisableCache) {
+        response.setHeader("Cache-Control", "no-store, max-age=0");
+      }
+    },
+  })
+);
 registerStaticAssetRoutes(app);
 
 app.get("/api/health", (_request, response) => {
