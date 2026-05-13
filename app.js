@@ -320,7 +320,9 @@ async function initializeAccess() {
 
 async function refreshAccessStatus() {
   try {
-    const response = await fetch("/api/auth/status");
+    const response = await fetch("/api/auth/status", {
+      credentials: "include",
+    });
     const payload = await response.json();
     authState.checked = true;
     authState.authenticated = Boolean(payload.authenticated);
@@ -2482,7 +2484,9 @@ async function handleCalendarCsvUpload(event) {
 
 async function refreshMicrosoftSession() {
   try {
-    const response = await fetch("/api/session");
+    const response = await fetch("/api/session", {
+      credentials: "include",
+    });
     const payload = await response.json();
     microsoftSession = {
       authenticated: Boolean(payload.authenticated),
@@ -2518,6 +2522,7 @@ async function submitAuthForm(event) {
   try {
     const response = await fetch("/api/auth/login", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password, rememberDevice }),
     });
@@ -2571,6 +2576,7 @@ async function saveSecuritySettings(event) {
   try {
     const response = await fetch("/api/auth/password", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         currentPassword,
@@ -2595,7 +2601,10 @@ async function saveSecuritySettings(event) {
 
 async function logoutHalAccess() {
   try {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    });
   } catch {
     // Even if the request fails, treat the local session as closed.
   }
@@ -3329,7 +3338,9 @@ function renderBackupSnapshotList(snapshots) {
 
 async function initializeServerStateMirror() {
   try {
-    const response = await fetch("/api/state");
+    const response = await fetch("/api/state", {
+      credentials: "include",
+    });
     const payload = await response.json();
     if (!response.ok) {
       throw new Error(payload.error || "HAL could not reach the local state mirror.");
@@ -3395,6 +3406,7 @@ async function saveStateToServer() {
   try {
     const response = await fetch("/api/state", {
       method: "PUT",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(buildPersistedState()),
     });
