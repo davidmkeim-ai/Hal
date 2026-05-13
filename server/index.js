@@ -10,18 +10,24 @@ import { createMsalClient, getAuthCodeUrlRequest, getTokenRequest } from "./msal
 import { createTeamsCalendarEvent, getOutlookCalendarEventsForDay } from "./graph.js";
 import { createHalInterpretation } from "./openai.js";
 import { getSmsStatus, sendTestSms } from "./sms.js";
-import { readHalState, writeHalState } from "./state-store.js";
+import { getHalStateStoreStatus, readHalState, writeHalState } from "./state-store.js";
 import { getTeamsNotificationStatus, sendTestTeamsNotification } from "./teams-notifications.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const workspaceRoot = path.resolve(__dirname, "..");
 const backupsRoot = config.storage.backupsRoot;
+const clientRootFiles = new Map([
+  ["app.js", "app.js"],
+  ["styles.css", "styles.css"],
+  ["favicon.svg", "favicon.svg"],
+  ["hal.config.example.js", "hal.config.example.js"],
+]);
 
 const app = express();
 const msalClient = createMsalClient();
 
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 app.use(
   session({
     name: "hal.sid",
@@ -38,6 +44,7 @@ app.use(
 );
 
 app.use(express.static(workspaceRoot));
+registerStaticAssetRoutes(app);
 
 app.get("/api/health", (_request, response) => {
   response.json({
@@ -75,6 +82,11 @@ app.get("/api/state", async (_request, response) => {
       error: `HAL could not read the local state mirror: ${error.message}`,
     });
   }
+});
+
+app.get("/api/state/status", async (_request, response) => {
+  const status = await getHalStateStoreStatus();
+  response.status(status.ok ? 200 : 500).json(status);
 });
 
 app.put("/api/state", async (request, response) => {
@@ -401,9 +413,35 @@ app.get("*", (_request, response) => {
   response.sendFile(path.join(workspaceRoot, "index.html"));
 });
 
-app.listen(config.port, () => {
-  console.log(`HAL server listening on ${config.baseUrl}`);
-});
+export default app;
+
+if (isDirectExecution()) {
+  app.listen(config.port, () => {
+    console.log(`HAL server listening on ${config.baseUrl}`);
+  });
+}
+
+function isDirectExecution() {
+  return path.resolve(process.argv[1] || "") === __filename;
+}
+
+function registerStaticAssetRoutes(expressApp) {
+  clientRootFiles.forEach((filePath, routePath) => {
+    expressApp.get(`/${routePath}`, (_request, response) => {
+      response.sendFile(path.join(workspaceRoot, filePath));
+    });
+  });
+
+  expressApp.get("/assets/*", (request, response) => {
+    const assetPath = String(request.params[0] || "").replace(/\\/g, "/");
+    if (!assetPath || assetPath.includes("..")) {
+      response.status(404).end();
+      return;
+    }
+
+    response.sendFile(path.join(workspaceRoot, "assets", assetPath));
+  });
+}
 
 async function listBackupSnapshots() {
   await mkdir(backupsRoot, { recursive: true });
@@ -717,6 +755,10 @@ function sanitizeMemory(memory) {
       preferences: {
         taskTitleCorrections: [],
         ideaTitleCorrections: [],
+        intentCorrections: [],
+        taskListCorrections: [],
+        meetingTargetCorrections: [],
+        routingPatterns: [],
       },
     };
   }
@@ -733,6 +775,15 @@ function sanitizeMemory(memory) {
         : [],
       intentCorrections: Array.isArray(memory.preferences?.intentCorrections)
         ? memory.preferences.intentCorrections.slice(0, 12)
+        : [],
+      taskListCorrections: Array.isArray(memory.preferences?.taskListCorrections)
+        ? memory.preferences.taskListCorrections.slice(0, 12)
+        : [],
+      meetingTargetCorrections: Array.isArray(memory.preferences?.meetingTargetCorrections)
+        ? memory.preferences.meetingTargetCorrections.slice(0, 12)
+        : [],
+      routingPatterns: Array.isArray(memory.preferences?.routingPatterns)
+        ? memory.preferences.routingPatterns.slice(0, 16)
         : [],
     },
   };

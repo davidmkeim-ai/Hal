@@ -18,6 +18,9 @@ A lightweight scaffold for a personal assistant app that helps capture notes, or
 - Local backup and restore tools, plus timestamped snapshot files in the `backups` folder
 - Local server-state mirroring into `data/hal-state.json` so HAL can start moving toward a shared backend model without dropping local safety
 - A reusable server-side state store module so the current file mirror can later be swapped for a hosted database with less frontend churn
+- Browser-uploaded calendar CSV support so `My Day` can work without depending on a server-local calendar file
+- Optional Supabase-backed state storage for a free-hosting path
+- A Vercel-ready Express entry point and routing config so HAL can be hosted without changing the local workflow
 - Teams activity-feed reminder notification scaffolding using Microsoft Graph
 - SMS reminder delivery scaffolding with saved phone settings and a backend test route
 - Teams-aware frontend hooks and a starter Microsoft Teams app package
@@ -44,6 +47,9 @@ HAL is designed to be iterated locally first. Microsoft integrations are optiona
 - [docs/build-log.md](C:\Users\dmk\OneDrive - RW Supply + Design\Personal Assistant App\docs\build-log.md)
 - [docs/entra-app-registration.md](C:\Users\dmk\OneDrive - RW Supply + Design\Personal Assistant App\docs\entra-app-registration.md)
 - [docs/online-migration-plan.md](C:\Users\dmk\OneDrive - RW Supply + Design\Personal Assistant App\docs\online-migration-plan.md)
+- [docs/free-online-setup.md](C:\Users\dmk\OneDrive - RW Supply + Design\Personal Assistant App\docs\free-online-setup.md)
+- [docs/supabase-schema.sql](C:\Users\dmk\OneDrive - RW Supply + Design\Personal Assistant App\docs\supabase-schema.sql)
+- [vercel.json](C:\Users\dmk\OneDrive - RW Supply + Design\Personal Assistant App\vercel.json)
 
 ## Teams files included
 

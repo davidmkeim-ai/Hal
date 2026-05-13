@@ -13,12 +13,18 @@ export const config = {
   baseUrl: (process.env.HAL_BASE_URL || "http://localhost:4000").replace(/\/$/, ""),
   tabPath: process.env.HAL_TAB_PATH || "/index.html",
   storage: {
+    provider: (process.env.HAL_STORAGE_PROVIDER || "file").toLowerCase(),
     dataRoot: process.env.HAL_DATA_ROOT
       ? path.resolve(process.env.HAL_DATA_ROOT)
       : path.resolve(process.cwd(), "data"),
     backupsRoot: process.env.HAL_BACKUP_ROOT
       ? path.resolve(process.env.HAL_BACKUP_ROOT)
       : path.resolve(process.cwd(), "backups"),
+  },
+  supabase: {
+    url: process.env.SUPABASE_URL || "",
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+    stateKey: process.env.HAL_SUPABASE_STATE_KEY || "default",
   },
   openai: {
     apiKey: process.env.OPENAI_API_KEY || "",
@@ -78,4 +84,8 @@ export function isTeamsNotificationsConfigured() {
 
 export function isGoogleCalendarConfigured() {
   return Boolean(config.google.clientId && config.google.clientSecret && config.google.redirectUri);
+}
+
+export function isSupabaseConfigured() {
+  return Boolean(config.supabase.url && config.supabase.serviceRoleKey);
 }

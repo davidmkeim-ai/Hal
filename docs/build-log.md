@@ -108,6 +108,23 @@
 - On startup, HAL can recover from the server mirror if the browser copy is empty, which starts the move toward a backend-owned HAL state without risking the current local experience.
 - Extracted that mirror into a reusable server-side state store module so the app is less tightly coupled to a single JSON file implementation.
 - Added env-configurable storage roots plus a starter [render.yaml](C:\Users\dmk\OneDrive - RW Supply + Design\Personal Assistant App\render.yaml) so HAL has a concrete first hosted path when you're ready.
+- Added browser-managed calendar CSV upload support so `My Day` can refresh from uploaded CSV content without relying on a host machine's local calendar file.
+
+### Stronger correction learning
+- Added reusable routing-pattern memory so HAL stores the original prompt, corrected destination, target list/note, correction wording, and learned keywords.
+- HAL now applies those learned routing patterns before fallback interpretation, which should make repeated corrections start sticking more reliably over time.
+- Exposed the richer routing-pattern memory to the backend AI interpretation request so the hosted/online path can reuse the same learning model later.
+
+## 2026-04-21
+
+### Free online path
+- Chose a free-oriented online plan using GitHub, Vercel, and Supabase instead of paid Render persistent disks.
+- Added optional Supabase-backed HAL state storage behind the existing server state-store boundary.
+- Added Supabase configuration variables and a starter `hal_state` table schema.
+- Kept the file-backed local store as the default so local HAL continues working until Supabase is configured.
+- Added a Vercel-ready Express export path so HAL can be deployed as a single hosted function while still starting normally for local Windows use.
+- Added [api/index.js](C:\Users\dmk\OneDrive - RW Supply + Design\Personal Assistant App\api\index.js) as the hosted entry point and [vercel.json](C:\Users\dmk\OneDrive - RW Supply + Design\Personal Assistant App\vercel.json) to rewrite all requests through it.
+- Added explicit core client asset routes in [server/index.js](C:\Users\dmk\OneDrive - RW Supply + Design\Personal Assistant App\server\index.js) so the hosted version does not depend on `express.static()` support.
 
 ## Logging policy going forward
 - Continue appending major architecture, workflow, and integration changes here as HAL evolves.

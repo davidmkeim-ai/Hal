@@ -116,6 +116,8 @@ const elements = {
   myDaySettingsDialog: document.querySelector("#myDaySettingsDialog"),
   closeMyDaySettings: document.querySelector("#closeMyDaySettings"),
   myDaySettingsForm: document.querySelector("#myDaySettingsForm"),
+  uploadCalendarCsv: document.querySelector("#uploadCalendarCsv"),
+  uploadCalendarCsvInput: document.querySelector("#uploadCalendarCsvInput"),
   calendarProvider: document.querySelector("#calendarProvider"),
   googleCalendarPanel: document.querySelector("#googleCalendarPanel"),
   googleCalendarStatus: document.querySelector("#googleCalendarStatus"),
@@ -313,6 +315,8 @@ function bindEvents() {
   on(elements.openMyDaySettings, "click", () => elements.myDaySettingsDialog?.showModal());
   on(elements.closeMyDaySettings, "click", () => elements.myDaySettingsDialog?.close());
   on(elements.myDaySettingsForm, "submit", saveMyDaySettings);
+  on(elements.uploadCalendarCsv, "click", promptCalendarCsvUpload);
+  on(elements.uploadCalendarCsvInput, "change", handleCalendarCsvUpload);
   on(elements.calendarProvider, "change", syncMyDaySettingsUI);
   on(elements.syncOutlookCalendar, "click", handleOutlookCalendarAction);
   on(elements.addCalendarEvent, "click", addCalendarEvent);
@@ -697,7 +701,6 @@ function renderMyDay() {
     .filter((task) => !task.done)
     .sort((left, right) => Number(Boolean(right.highlighted)) - Number(Boolean(left.highlighted)));
   const pastDueTasks = getPastDueTasks();
-  console.log("HAL renderMyDay", { selectedDate, tasks, allTasks: state.tasks });
 
   elements.myDayEvents.innerHTML = "";
   elements.myDayTasks.innerHTML = "";
@@ -770,6 +773,8 @@ function renderMyDay() {
       const highlightButton = row.querySelector('[data-action="highlight-task"]');
       const rescheduleButton = row.querySelector('[data-action="reschedule-task"]');
       const rescheduleInput = row.querySelector('[data-action="reschedule-input"]');
+      checkbox.addEventListener("mousedown", (event) => event.stopPropagation());
+      checkbox.addEventListener("click", (event) => event.stopPropagation());
       checkbox.addEventListener("change", () => {
         setTaskCompletion(task, checkbox.checked);
       });
@@ -1137,7 +1142,12 @@ function buildTaskCard(task, archived = false, options = {}) {
     </div>
   `;
   const checkbox = card.querySelector('input');
-  checkbox.addEventListener("change", () => setTaskCompletion(task, checkbox.checked));
+  checkbox.addEventListener("mousedown", (event) => event.stopPropagation());
+  checkbox.addEventListener("click", (event) => event.stopPropagation());
+  checkbox.addEventListener("change", (event) => {
+    event.stopPropagation();
+    setTaskCompletion(task, checkbox.checked);
+  });
   const highlightButton = card.querySelector('[aria-label="Highlight task"], [aria-label="Unhighlight task"]');
   const noteButton = card.querySelector(".task-note-button");
   const rescheduleButton = card.querySelector('[data-action="reschedule-task"]');
@@ -2322,6 +2332,36 @@ function handleOutlookCalendarAction() {
   void syncCsvCalendar(false);
 }
 
+function promptCalendarCsvUpload() {
+  elements.uploadCalendarCsvInput?.click();
+}
+
+async function handleCalendarCsvUpload(event) {
+  const file = event.target?.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  try {
+    const csv = await file.text();
+    const previewEvents = parseClientCsvCalendarEvents(csv);
+    state.calendarSettings = {
+      ...state.calendarSettings,
+      uploadedCsvContent: csv,
+      uploadedCsvName: file.name,
+      uploadedCsvImportedAt: new Date().toISOString(),
+    };
+    state.calendarEvents = state.calendarEvents.filter((item) => item.source !== "csv");
+    persist();
+    void syncCsvCalendar(false);
+    setMicStatus(`Imported ${previewEvents.length} calendar events.`, "");
+  } catch (error) {
+    setMicStatus("HAL could not import that calendar CSV.", error.message || "");
+  } finally {
+    event.target.value = "";
+  }
+}
+
 async function refreshMicrosoftSession() {
   try {
     const response = await fetch("/api/session");
@@ -2351,9 +2391,12 @@ function syncMyDayCalendarUI() {
   if (elements.myDayCalendarStatus) {
     const selectedDate = elements.myDayDate?.value || "";
     const csvEventCount = state.calendarEvents.filter((event) => event.source === "csv" && event.date === selectedDate).length;
+    const usingUpload = Boolean(state.calendarSettings?.uploadedCsvContent);
     elements.myDayCalendarStatus.textContent = state.lastCalendarSyncDate === selectedDate && !csvEventCount
       ? `No schedule items were found for ${formatDisplayDate(selectedDate)}.`
-      : "";
+      : usingUpload
+        ? `Using uploaded calendar file${state.calendarSettings?.uploadedCsvName ? `: ${state.calendarSettings.uploadedCsvName}` : ""}.`
+        : "";
   }
 }
 
@@ -2364,38 +2407,48 @@ async function syncCsvCalendar(silent = false) {
     return;
   }
 
+  const uploadedCsvContent = state.calendarSettings?.uploadedCsvContent || "";
   if (elements.myDayCalendarStatus) {
-    elements.myDayCalendarStatus.textContent = `Loading calendar CSV for ${formatDisplayDate(selectedDate)}...`;
+    elements.myDayCalendarStatus.textContent = uploadedCsvContent
+      ? `Refreshing uploaded calendar for ${formatDisplayDate(selectedDate)}...`
+      : `Loading calendar CSV for ${formatDisplayDate(selectedDate)}...`;
   }
 
   try {
-    const response = await fetch(`/api/calendar/csv/day?date=${encodeURIComponent(selectedDate)}`);
-    const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error || "HAL could not read the calendar CSV.");
+    let events = [];
+    if (uploadedCsvContent) {
+      events = parseClientCsvCalendarEvents(uploadedCsvContent)
+        .filter((event) => event.date === selectedDate);
+    } else {
+      const response = await fetch(`/api/calendar/csv/day?date=${encodeURIComponent(selectedDate)}`);
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || "HAL could not read the calendar CSV.");
+      }
+      events = payload.events || [];
     }
 
     state.calendarEvents = state.calendarEvents.filter((event) => event.source !== "csv" || event.date !== selectedDate);
-    state.calendarEvents.push(...payload.events);
+    state.calendarEvents.push(...events);
     state.lastCalendarSyncDate = selectedDate;
     persist();
     renderMyDay();
     if (!silent) {
-      if (payload.events.length) {
-        setMicStatus("Calendar CSV refreshed.", "");
-        speakHal("Calendar CSV refreshed.");
+      if (events.length) {
+        setMicStatus("Calendar refreshed.", "");
+        speakHal("Calendar refreshed.");
       } else {
-        setMicStatus("No calendar CSV events found for that date.", "");
-        speakHal("No calendar CSV events found for that date.");
+        setMicStatus("No calendar events found for that date.", "");
+        speakHal("No calendar events found for that date.");
       }
     }
   } catch (error) {
     if (elements.myDayCalendarStatus) {
-      elements.myDayCalendarStatus.textContent = error.message || "HAL could not read the calendar CSV.";
+      elements.myDayCalendarStatus.textContent = error.message || "HAL could not read the calendar.";
     }
     if (!silent) {
-      setMicStatus(error.message || "HAL could not read the calendar CSV.", "");
-      speakHal("HAL could not read the calendar CSV.");
+      setMicStatus(error.message || "HAL could not read the calendar.", "");
+      speakHal("HAL could not read the calendar.");
     }
   }
 }
@@ -3669,6 +3722,50 @@ function learnIntentCorrection(sourcePrompt, fromType, toType) {
   });
 }
 
+function learnRoutingPattern({
+  sourcePrompt,
+  fromType = "",
+  toType = "",
+  listId = "",
+  meetingSignature = "",
+  correctionText = "",
+}) {
+  const normalizedPrompt = normalizeIntentPrompt(sourcePrompt);
+  if (!normalizedPrompt) {
+    return;
+  }
+
+  const target = state.halMemory.preferences.routingPatterns;
+  const keywords = extractLearningKeywords(sourcePrompt);
+  const existing = target.find((entry) => (
+    entry.normalizedPrompt === normalizedPrompt
+    && entry.fromType === String(fromType || "")
+  ));
+
+  if (existing) {
+    existing.toType = String(toType || existing.toType || "");
+    existing.listId = String(listId || existing.listId || "");
+    existing.meetingSignature = normalizeMeetingTargetSignature(meetingSignature || existing.meetingSignature || "");
+    existing.keywords = keywords.length ? keywords : existing.keywords;
+    existing.lastCorrectionText = String(correctionText || existing.lastCorrectionText || "");
+    existing.count = Number(existing.count || 0) + 1;
+    existing.updatedAt = new Date().toISOString();
+    return;
+  }
+
+  target.unshift({
+    normalizedPrompt,
+    fromType: String(fromType || ""),
+    toType: String(toType || ""),
+    listId: String(listId || ""),
+    meetingSignature: normalizeMeetingTargetSignature(meetingSignature || ""),
+    keywords,
+    lastCorrectionText: String(correctionText || ""),
+    count: 1,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
 function learnTaskListCorrection(sourcePrompt, listId) {
   const normalizedPrompt = normalizeIntentPrompt(sourcePrompt);
   if (!normalizedPrompt || !listId) {
@@ -3687,6 +3784,13 @@ function learnTaskListCorrection(sourcePrompt, listId) {
     normalizedPrompt,
     listId,
     updatedAt: new Date().toISOString(),
+  });
+
+  learnRoutingPattern({
+    sourcePrompt,
+    fromType: "task",
+    toType: "task",
+    listId,
   });
 }
 
@@ -3710,6 +3814,13 @@ function learnMeetingTargetCorrection(sourcePrompt, note) {
     signature,
     updatedAt: new Date().toISOString(),
   });
+
+  learnRoutingPattern({
+    sourcePrompt,
+    fromType: "meeting",
+    toType: "meeting",
+    meetingSignature: signature,
+  });
 }
 
 function applyLearnedTitleCorrection(kind, title) {
@@ -3728,6 +3839,13 @@ function findLearnedTaskListCorrection(text) {
   const normalizedPrompt = normalizeIntentPrompt(text);
   if (!normalizedPrompt) {
     return null;
+  }
+
+  const routingPatternMatch = findBestRoutingPattern(normalizedPrompt, "task", {
+    requireList: true,
+  });
+  if (routingPatternMatch?.listId) {
+    return state.taskLists.find((list) => list.id === routingPatternMatch.listId) || null;
   }
 
   const bestMatch = state.halMemory.preferences.taskListCorrections
@@ -3750,6 +3868,13 @@ function findLearnedMeetingTargetCorrection(text) {
     return null;
   }
 
+  const routingPatternMatch = findBestRoutingPattern(normalizedPrompt, "meeting", {
+    requireMeetingSignature: true,
+  });
+  if (routingPatternMatch?.meetingSignature) {
+    return findMeetingNoteBySignature(routingPatternMatch.meetingSignature);
+  }
+
   const bestMatch = state.halMemory.preferences.meetingTargetCorrections
     .map((entry) => ({
       entry,
@@ -3769,6 +3894,13 @@ function applyLearnedIntentCorrection(text, interpretation) {
   const normalizedPrompt = normalizeIntentPrompt(text);
   if (!normalizedPrompt || !interpretation?.type) {
     return interpretation;
+  }
+
+  const routingPatternMatch = findBestRoutingPattern(normalizedPrompt, interpretation.type, {
+    requireToType: true,
+  });
+  if (routingPatternMatch?.toType && routingPatternMatch.toType !== interpretation.type) {
+    return rebuildInterpretationFromLearnedType(text, routingPatternMatch.toType, routingPatternMatch);
   }
 
   const bestMatch = state.halMemory.preferences.intentCorrections
@@ -3795,6 +3927,25 @@ function applyLearnedIntentCorrection(text, interpretation) {
   return interpretation;
 }
 
+function rebuildInterpretationFromLearnedType(text, targetType, routingPattern = null) {
+  if (targetType === "task") {
+    return buildTaskInterpretation(text, "", routingPattern?.listId || "");
+  }
+  if (targetType === "meeting") {
+    if (routingPattern?.meetingSignature && isLikelyMeetingUpdatePrompt(text)) {
+      const targetNote = findMeetingNoteBySignature(routingPattern.meetingSignature);
+      if (targetNote) {
+        return buildMeetingUpdateInterpretation(text, "", targetNote);
+      }
+    }
+    return buildMeetingInterpretation(text, "");
+  }
+  if (targetType === "idea") {
+    return buildIdeaInterpretation(text, "");
+  }
+  return interpretCapture(text, "");
+}
+
 function applyLearnedRoutingPreferences(text, interpretation) {
   if (!interpretation) {
     return interpretation;
@@ -3819,6 +3970,64 @@ function applyLearnedRoutingPreferences(text, interpretation) {
   return interpretation;
 }
 
+function findBestRoutingPattern(textOrNormalizedPrompt, interpretationType = "", options = {}) {
+  const normalizedPrompt = normalizeIntentPrompt(textOrNormalizedPrompt);
+  if (!normalizedPrompt) {
+    return null;
+  }
+
+  const bestMatch = state.halMemory.preferences.routingPatterns
+    .map((entry) => ({
+      entry,
+      score: scoreRoutingPattern(normalizedPrompt, interpretationType, entry),
+    }))
+    .filter(({ entry, score }) => {
+      if (options.requireToType && !entry.toType) {
+        return false;
+      }
+      if (options.requireList && !entry.listId) {
+        return false;
+      }
+      if (options.requireMeetingSignature && !entry.meetingSignature) {
+        return false;
+      }
+      return score >= 0.72;
+    })
+    .sort((left, right) => right.score - left.score)[0];
+
+  return bestMatch?.entry || null;
+}
+
+function scoreRoutingPattern(normalizedPrompt, interpretationType, entry) {
+  const promptScore = scoreIntentCorrection(normalizedPrompt, entry.normalizedPrompt);
+  const promptTokens = tokenizeIntentPrompt(normalizedPrompt);
+  const keywordScore = scoreKeywordOverlap(promptTokens, entry.keywords || []);
+  const typeBoost = entry.fromType && interpretationType && entry.fromType === interpretationType ? 0.18 : 0;
+  const confidenceBoost = Math.min(Number(entry.count || 1), 5) * 0.04;
+  return promptScore + keywordScore + typeBoost + confidenceBoost;
+}
+
+function extractLearningKeywords(value) {
+  return normalizeLearningKeywords(tokenizeIntentPrompt(value).slice(0, 8));
+}
+
+function normalizeLearningKeywords(items) {
+  return Array.from(new Set(
+    (Array.isArray(items) ? items : [])
+      .map((item) => String(item || "").trim().toLowerCase())
+      .filter(Boolean),
+  )).slice(0, 8);
+}
+
+function scoreKeywordOverlap(sourceTokens, targetKeywords) {
+  if (!sourceTokens.length || !targetKeywords.length) {
+    return 0;
+  }
+  const sourceSet = new Set(sourceTokens);
+  const shared = targetKeywords.filter((token) => sourceSet.has(token)).length;
+  return shared / Math.max(sourceTokens.length, targetKeywords.length);
+}
+
 function createDefaultHalMemory() {
   return {
     promptHistory: [],
@@ -3829,6 +4038,7 @@ function createDefaultHalMemory() {
       intentCorrections: [],
       taskListCorrections: [],
       meetingTargetCorrections: [],
+      routingPatterns: [],
     },
   };
 }
@@ -3892,6 +4102,25 @@ function normalizeMeetingTargetCorrections(items) {
     : [];
 }
 
+function normalizeRoutingPatterns(items) {
+  return Array.isArray(items)
+    ? items
+      .filter((item) => item && item.normalizedPrompt)
+      .map((item) => ({
+        normalizedPrompt: normalizeIntentPrompt(item.normalizedPrompt),
+        fromType: String(item.fromType || ""),
+        toType: String(item.toType || ""),
+        listId: String(item.listId || ""),
+        meetingSignature: normalizeMeetingTargetSignature(item.meetingSignature || ""),
+        keywords: normalizeLearningKeywords(item.keywords),
+        lastCorrectionText: String(item.lastCorrectionText || ""),
+        count: Math.max(1, Number(item.count || 1)),
+        updatedAt: item.updatedAt || new Date().toISOString(),
+      }))
+      .filter((item) => item.normalizedPrompt)
+    : [];
+}
+
 function normalizeHalMemory(memory) {
   const defaults = createDefaultHalMemory();
   return {
@@ -3904,6 +4133,7 @@ function normalizeHalMemory(memory) {
       intentCorrections: normalizeIntentCorrections(memory?.preferences?.intentCorrections),
       taskListCorrections: normalizeTaskListCorrections(memory?.preferences?.taskListCorrections),
       meetingTargetCorrections: normalizeMeetingTargetCorrections(memory?.preferences?.meetingTargetCorrections),
+      routingPatterns: normalizeRoutingPatterns(memory?.preferences?.routingPatterns),
     },
   };
 }
@@ -4371,6 +4601,13 @@ function applyCategoryCorrection(intent, userText) {
       source.item.listId = intent.targetTaskListId;
       state.selectedTaskListId = intent.targetTaskListId;
       learnTaskListCorrection(getSourcePromptForItem(source) || userText, intent.targetTaskListId);
+      learnRoutingPattern({
+        sourcePrompt: getSourcePromptForItem(source) || userText,
+        fromType: "task",
+        toType: "task",
+        listId: intent.targetTaskListId,
+        correctionText: userText,
+      });
       state.lastCreated = { type: "task", id: source.id };
       state.selected = { type: "task", id: source.id };
       state.correctionContext = {
@@ -4408,6 +4645,15 @@ function applyCategoryCorrection(intent, userText) {
     speakHal("HAL could not correct that item yet.");
     return;
   }
+
+  learnRoutingPattern({
+    sourcePrompt,
+    fromType: source.type,
+    toType: target,
+    listId: target === "task" ? replacement.listId || "" : "",
+    meetingSignature: target === "meeting" ? buildMeetingTargetSignature(replacement) : "",
+    correctionText: userText,
+  });
 
   removeItemFromSection(source.type, source.id);
   insertCorrectedItem(target, replacement);
@@ -5199,6 +5445,107 @@ function parseCalendarEventTime(value) {
   return (hours * 60) + minutes;
 }
 
+function parseClientCsvCalendarEvents(csv) {
+  const lines = String(csv || "")
+    .replace(/^\uFEFF/, "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (!lines.length) {
+    return [];
+  }
+
+  return lines.slice(1)
+    .map(parseClientCsvCalendarRow)
+    .filter(Boolean)
+    .sort((left, right) => compareCalendarEvents(left, right));
+}
+
+function parseClientCsvCalendarRow(line) {
+  const values = splitSimpleCsvLineClient(line);
+  if (values.length < 3) {
+    return null;
+  }
+
+  const title = values[0]?.trim();
+  const date = normalizeClientCsvDate(values[1]);
+  const time = normalizeClientCsvTime(values[2]);
+
+  if (!title || !date) {
+    return null;
+  }
+
+  return {
+    id: crypto.randomUUID(),
+    title,
+    date,
+    time,
+    source: "csv",
+  };
+}
+
+function splitSimpleCsvLineClient(line) {
+  const values = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const character = line[index];
+
+    if (character === '"') {
+      const nextCharacter = line[index + 1];
+      if (inQuotes && nextCharacter === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (character === "," && !inQuotes) {
+      values.push(current);
+      current = "";
+      continue;
+    }
+
+    current += character;
+  }
+
+  values.push(current);
+  return values;
+}
+
+function normalizeClientCsvDate(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return raw;
+  }
+
+  const slashMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slashMatch) {
+    const month = slashMatch[1].padStart(2, "0");
+    const day = slashMatch[2].padStart(2, "0");
+    return `${slashMatch[3]}-${month}-${day}`;
+  }
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+
+  return toLocalDateInputValue(parsed);
+}
+
+function normalizeClientCsvTime(value) {
+  return String(value || "").trim();
+}
+
 function normalizeIntentPrompt(value) {
   return tokenizeIntentPrompt(value).join(" ");
 }
@@ -5753,6 +6100,9 @@ function loadState() {
       googleMode: "both",
       googleWorkCalendarName: "Work",
       googlePersonalCalendarName: "Personal",
+      uploadedCsvContent: "",
+      uploadedCsvName: "",
+      uploadedCsvImportedAt: "",
     },
     lastCalendarSyncDate: "",
     reminders: [],
@@ -5844,6 +6194,9 @@ function normalizeLoadedState(parsed = {}, fallback = null) {
       googleMode: parsed.calendarSettings?.googleMode || "both",
       googleWorkCalendarName: parsed.calendarSettings?.googleWorkCalendarName || "Work",
       googlePersonalCalendarName: parsed.calendarSettings?.googlePersonalCalendarName || "Personal",
+      uploadedCsvContent: parsed.calendarSettings?.uploadedCsvContent || "",
+      uploadedCsvName: parsed.calendarSettings?.uploadedCsvName || "",
+      uploadedCsvImportedAt: parsed.calendarSettings?.uploadedCsvImportedAt || "",
     },
     calendarEvents: Array.isArray(parsed.calendarEvents)
       ? parsed.calendarEvents.map((event) => ({
