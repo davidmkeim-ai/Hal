@@ -1,6 +1,6 @@
 import express from "express";
 import session from "express-session";
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,6 +18,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const workspaceRoot = path.resolve(__dirname, "..");
 const backupsRoot = config.storage.backupsRoot;
+const HAL_AUTH_COOKIE = "hal.auth";
+const HAL_AUTH_COOKIE_VALUE = "v1";
 const clientRootFiles = new Map([
   ["app.js", "app.js"],
   ["styles.css", "styles.css"],
@@ -60,7 +62,7 @@ app.get("/api/health", (_request, response) => {
 app.get("/api/auth/status", async (request, response) => {
   try {
     const status = await getHalAuthStatus({
-      authenticated: Boolean(request.session.halAuthenticated),
+      authenticated: hasValidHalAuthCookie(request),
     });
     response.json(status);
   } catch (error) {
@@ -88,20 +90,17 @@ app.post("/api/auth/login", async (request, response) => {
       return;
     }
 
-    request.session.halAuthenticated = true;
     const status = await getHalAuthStatus({ authenticated: true });
-    request.session.save((error) => {
-      if (error) {
-        response.status(500).json({
-          error: "HAL unlocked, but the session could not be saved.",
-        });
-        return;
-      }
-
-      response.json({
-        ok: true,
-        status,
-      });
+    response.cookie(HAL_AUTH_COOKIE, buildHalAuthCookieValue(), {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: config.baseUrl.startsWith("https://"),
+      maxAge: 1000 * 60 * 60 * 8,
+      path: "/",
+    });
+    response.json({
+      ok: true,
+      status,
     });
   } catch (error) {
     response.status(500).json({
@@ -120,6 +119,12 @@ app.post("/api/auth/logout", (request, response) => {
     }
 
     response.clearCookie("hal.sid");
+    response.clearCookie(HAL_AUTH_COOKIE, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: config.baseUrl.startsWith("https://"),
+      path: "/",
+    });
     response.json({
       ok: true,
     });
@@ -154,7 +159,7 @@ app.use("/api", requireHalAuthentication);
 
 app.get("/api/session", (request, response) => {
   response.json({
-    appAuthenticated: Boolean(request.session.halAuthenticated),
+    appAuthenticated: hasValidHalAuthCookie(request),
     authenticated: Boolean(request.session.account),
     user: request.session.account
       ? {
@@ -543,7 +548,7 @@ function registerStaticAssetRoutes(expressApp) {
 }
 
 function requireHalAuthentication(request, response, next) {
-  if (request.session?.halAuthenticated) {
+  if (hasValidHalAuthCookie(request)) {
     next();
     return;
   }
@@ -551,6 +556,59 @@ function requireHalAuthentication(request, response, next) {
   response.status(401).json({
     error: "HAL is locked. Sign in first.",
   });
+}
+
+function hasValidHalAuthCookie(request) {
+  const cookies = parseCookieHeader(request.headers.cookie || "");
+  const candidate = cookies[HAL_AUTH_COOKIE];
+  if (!candidate) {
+    return false;
+  }
+
+  return verifyHalAuthCookieValue(candidate);
+}
+
+function buildHalAuthCookieValue() {
+  const signature = createHmac("sha256", config.sessionSecret)
+    .update(HAL_AUTH_COOKIE_VALUE)
+    .digest("hex");
+  return `${HAL_AUTH_COOKIE_VALUE}.${signature}`;
+}
+
+function verifyHalAuthCookieValue(value) {
+  const [token, signature] = String(value || "").split(".");
+  if (!token || !signature || token !== HAL_AUTH_COOKIE_VALUE) {
+    return false;
+  }
+
+  const expected = createHmac("sha256", config.sessionSecret)
+    .update(token)
+    .digest("hex");
+
+  const left = Buffer.from(signature, "hex");
+  const right = Buffer.from(expected, "hex");
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return timingSafeEqual(left, right);
+}
+
+function parseCookieHeader(cookieHeader) {
+  return String(cookieHeader || "")
+    .split(/;\s*/)
+    .filter(Boolean)
+    .reduce((accumulator, pair) => {
+      const separatorIndex = pair.indexOf("=");
+      if (separatorIndex <= 0) {
+        return accumulator;
+      }
+
+      const key = pair.slice(0, separatorIndex).trim();
+      const value = decodeURIComponent(pair.slice(separatorIndex + 1).trim());
+      accumulator[key] = value;
+      return accumulator;
+    }, {});
 }
 
 async function listBackupSnapshots() {
