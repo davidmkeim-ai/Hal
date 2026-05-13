@@ -3339,8 +3339,20 @@ async function initializeServerStateMirror() {
     serverStateSync.lastMeta = payload.meta || null;
     const localHasData = hasMeaningfulHalData(state);
     const serverHasData = hasMeaningfulHalData(serverData);
+    const hostedMode = !isLocalHalHost();
     const localScore = calculateMeaningfulHalDataScore(state);
     const serverScore = calculateMeaningfulHalDataScore(serverData);
+
+    if (hostedMode) {
+      if (serverHasData) {
+        restoreFromBackupPayload(serverData);
+        render();
+        setMicStatus("Loaded HAL data from the cloud.", "");
+      } else if (localHasData) {
+        await saveStateToServer();
+      }
+      return true;
+    }
 
     if (!localHasData && serverHasData) {
       restoreFromBackupPayload(serverData);
@@ -3416,6 +3428,11 @@ function calculateMeaningfulHalDataScore(source) {
   score += Array.isArray(source.quickLinks) && source.quickLinks.length > 4 ? source.quickLinks.length - 4 : 0;
   score += typeof source.quote === "string" && source.quote !== "Build the life and systems you want to live inside." ? 1 : 0;
   return score;
+}
+
+function isLocalHalHost() {
+  const host = window.location.hostname || "";
+  return host === "localhost" || host === "127.0.0.1";
 }
 
 function setTaskCompletion(task, isComplete) {
