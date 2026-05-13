@@ -316,9 +316,23 @@ function initialize() {
   syncTaskTimeField();
   syncQuickTaskTimeField();
   syncTaskEditorState();
-  render();
   renderAccessState();
   void initializeAccess();
+  try {
+    render();
+    updateAuthDebugState({
+      lastBoot: "initial render complete",
+      lastError: "",
+    });
+  } catch (error) {
+    updateAuthDebugState({
+      lastBoot: "initial render failed",
+      lastError: error?.message || "initial render failed",
+    });
+    if (elements.authStatus) {
+      elements.authStatus.textContent = "HAL hit a startup issue, but the login flow is still available.";
+    }
+  }
 }
 
 function updateAuthDebugState(patch = {}) {
