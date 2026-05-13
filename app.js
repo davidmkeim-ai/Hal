@@ -1,5 +1,6 @@
 const STORAGE_KEYS = {
   app: "hal.architecture.v1",
+  remember: "hal.auth.remember.v1",
 };
 
 const REMINDER_STOP_WORDS = new Set([
@@ -311,6 +312,9 @@ function bindPasswordRevealButtons() {
 
 async function initializeAccess() {
   await refreshAccessStatus();
+  if (!authState.authenticated) {
+    await tryRestoreRememberedAccess();
+  }
   renderAccessState();
 
   if (authState.authenticated) {
@@ -2531,6 +2535,12 @@ async function submitAuthForm(event) {
       throw new Error(payload.error || "HAL could not unlock.");
     }
 
+    if (rememberDevice && payload.rememberToken) {
+      localStorage.setItem(STORAGE_KEYS.remember, payload.rememberToken);
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.remember);
+    }
+
     elements.authPassword.value = "";
     if (elements.authRememberDevice) {
       elements.authRememberDevice.checked = false;
@@ -2609,11 +2619,39 @@ async function logoutHalAccess() {
     // Even if the request fails, treat the local session as closed.
   }
 
+  localStorage.removeItem(STORAGE_KEYS.remember);
   authState.authenticated = false;
   appBoot.started = false;
   renderAccessState();
   elements.securitySettingsDialog?.close();
   setMicStatus("HAL locked.", "");
+}
+
+async function tryRestoreRememberedAccess() {
+  const token = localStorage.getItem(STORAGE_KEYS.remember);
+  if (!token) {
+    return false;
+  }
+
+  try {
+    const response = await fetch("/api/auth/restore", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "HAL could not restore the remembered device session.");
+    }
+
+    await refreshAccessStatus();
+    return authState.authenticated;
+  } catch {
+    localStorage.removeItem(STORAGE_KEYS.remember);
+    authState.authenticated = false;
+    return false;
+  }
 }
 
 function syncMyDayCalendarUI() {

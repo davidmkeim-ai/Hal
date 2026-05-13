@@ -94,6 +94,9 @@ app.post("/api/auth/login", async (request, response) => {
     }
 
     const status = await getHalAuthStatus({ authenticated: true });
+    const rememberToken = rememberDevice
+      ? buildHalRememberToken(REMEMBERED_AUTH_MAX_AGE_MS)
+      : null;
     response.cookie(HAL_AUTH_COOKIE, buildHalAuthCookieValue(), {
       httpOnly: true,
       sameSite: "lax",
@@ -104,12 +107,36 @@ app.post("/api/auth/login", async (request, response) => {
     response.json({
       ok: true,
       status,
+      rememberToken,
     });
   } catch (error) {
     response.status(500).json({
       error: `HAL could not validate the password: ${error.message}`,
     });
   }
+});
+
+app.post("/api/auth/restore", async (request, response) => {
+  const token = String(request.body?.token || "");
+  if (!token || !verifyHalRememberToken(token)) {
+    response.status(401).json({
+      error: "HAL could not restore this remembered device session.",
+    });
+    return;
+  }
+
+  const status = await getHalAuthStatus({ authenticated: true });
+  response.cookie(HAL_AUTH_COOKIE, buildHalAuthCookieValue(), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: config.baseUrl.startsWith("https://"),
+    maxAge: SHORT_AUTH_MAX_AGE_MS,
+    path: "/",
+  });
+  response.json({
+    ok: true,
+    status,
+  });
 });
 
 app.post("/api/auth/logout", (request, response) => {
@@ -588,6 +615,44 @@ function verifyHalAuthCookieValue(value) {
     .update(token)
     .digest("hex");
 
+  const left = Buffer.from(signature, "hex");
+  const right = Buffer.from(expected, "hex");
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return timingSafeEqual(left, right);
+}
+
+function buildHalRememberToken(maxAgeMs) {
+  const expiresAt = Date.now() + maxAgeMs;
+  const payload = `${HAL_AUTH_COOKIE_VALUE}:${expiresAt}`;
+  const signature = createHmac("sha256", config.sessionSecret)
+    .update(payload)
+    .digest("hex");
+  return `${payload}:${signature}`;
+}
+
+function verifyHalRememberToken(value) {
+  const parts = String(value || "").split(":");
+  if (parts.length !== 3) {
+    return false;
+  }
+
+  const [token, expiresAtRaw, signature] = parts;
+  if (token !== HAL_AUTH_COOKIE_VALUE) {
+    return false;
+  }
+
+  const expiresAt = Number(expiresAtRaw);
+  if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+    return false;
+  }
+
+  const payload = `${token}:${expiresAtRaw}`;
+  const expected = createHmac("sha256", config.sessionSecret)
+    .update(payload)
+    .digest("hex");
   const left = Buffer.from(signature, "hex");
   const right = Buffer.from(expected, "hex");
   if (left.length !== right.length) {
