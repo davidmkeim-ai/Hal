@@ -262,8 +262,6 @@ const elements = {
   searchMicButtons: document.querySelectorAll(".search-mic-button"),
 };
 
-initialize();
-
 window.fetch = function halFetch(input, init = {}) {
   const requestUrl = typeof input === "string"
     ? new URL(input, window.location.origin)
@@ -286,6 +284,8 @@ window.fetch = function halFetch(input, init = {}) {
     headers,
   });
 };
+
+initialize();
 
 function initialize() {
   applyTheme(state.theme || "dark");
