@@ -125,6 +125,8 @@
 - Added a Vercel-ready Express export path so HAL can be deployed as a single hosted function while still starting normally for local Windows use.
 - Added [api/index.js](C:\Users\dmk\OneDrive - RW Supply + Design\Personal Assistant App\api\index.js) as the hosted entry point and [vercel.json](C:\Users\dmk\OneDrive - RW Supply + Design\Personal Assistant App\vercel.json) to rewrite all requests through it.
 - Added explicit core client asset routes in [server/index.js](C:\Users\dmk\OneDrive - RW Supply + Design\Personal Assistant App\server\index.js) so the hosted version does not depend on `express.static()` support.
+- Added a real HAL password gate backed by the existing session middleware, with protected API routes, login/logout endpoints, and a backend password store that can use Supabase or the local data folder.
+- Added a frontend unlock screen plus Security settings so the password can be changed from inside HAL after the first sign-in.
 
 ## Logging policy going forward
 - Continue appending major architecture, workflow, and integration changes here as HAL evolves.

@@ -10,6 +10,7 @@ import { createMsalClient, getAuthCodeUrlRequest, getTokenRequest } from "./msal
 import { createTeamsCalendarEvent, getOutlookCalendarEventsForDay } from "./graph.js";
 import { createHalInterpretation } from "./openai.js";
 import { getSmsStatus, sendTestSms } from "./sms.js";
+import { changeHalAccessPassword, getHalAuthStatus, verifyHalAccessPassword } from "./auth-store.js";
 import { getHalStateStoreStatus, readHalState, writeHalState } from "./state-store.js";
 import { getTeamsNotificationStatus, sendTestTeamsNotification } from "./teams-notifications.js";
 
@@ -56,8 +57,95 @@ app.get("/api/health", (_request, response) => {
   });
 });
 
+app.get("/api/auth/status", async (request, response) => {
+  try {
+    const status = await getHalAuthStatus({
+      authenticated: Boolean(request.session.halAuthenticated),
+    });
+    response.json(status);
+  } catch (error) {
+    response.status(500).json({
+      error: `HAL could not read its security status: ${error.message}`,
+    });
+  }
+});
+
+app.post("/api/auth/login", async (request, response) => {
+  const password = String(request.body?.password || "");
+  if (!password) {
+    response.status(400).json({
+      error: "Enter the HAL password first.",
+    });
+    return;
+  }
+
+  try {
+    const valid = await verifyHalAccessPassword(password);
+    if (!valid) {
+      response.status(401).json({
+        error: "That password did not unlock HAL.",
+      });
+      return;
+    }
+
+    request.session.halAuthenticated = true;
+    const status = await getHalAuthStatus({ authenticated: true });
+    response.json({
+      ok: true,
+      status,
+    });
+  } catch (error) {
+    response.status(500).json({
+      error: `HAL could not validate the password: ${error.message}`,
+    });
+  }
+});
+
+app.post("/api/auth/logout", (request, response) => {
+  request.session.destroy((error) => {
+    if (error) {
+      response.status(500).json({
+        error: "HAL could not end this session cleanly.",
+      });
+      return;
+    }
+
+    response.clearCookie("hal.sid");
+    response.json({
+      ok: true,
+    });
+  });
+});
+
+app.post("/api/auth/password", requireHalAuthentication, async (request, response) => {
+  const currentPassword = String(request.body?.currentPassword || "");
+  const newPassword = String(request.body?.newPassword || "");
+
+  try {
+    const result = await changeHalAccessPassword({ currentPassword, newPassword });
+    if (!result.ok) {
+      response.status(result.code || 400).json({
+        error: result.error,
+      });
+      return;
+    }
+
+    response.json({
+      ok: true,
+      updatedAt: result.updatedAt,
+    });
+  } catch (error) {
+    response.status(500).json({
+      error: `HAL could not update the password: ${error.message}`,
+    });
+  }
+});
+
+app.use("/api", requireHalAuthentication);
+
 app.get("/api/session", (request, response) => {
   response.json({
+    appAuthenticated: Boolean(request.session.halAuthenticated),
     authenticated: Boolean(request.session.account),
     user: request.session.account
       ? {
@@ -297,6 +385,8 @@ app.post("/api/notifications/teams/test", async (request, response) => {
   }
 });
 
+app.use("/auth", requireHalAuthentication);
+
 app.get("/auth/microsoft/start", async (request, response) => {
   if (!isAuthConfigured()) {
     response.status(500).send("HAL is missing Microsoft Entra configuration. Update .env first.");
@@ -440,6 +530,17 @@ function registerStaticAssetRoutes(expressApp) {
     }
 
     response.sendFile(path.join(workspaceRoot, "assets", assetPath));
+  });
+}
+
+function requireHalAuthentication(request, response, next) {
+  if (request.session?.halAuthenticated) {
+    next();
+    return;
+  }
+
+  response.status(401).json({
+    error: "HAL is locked. Sign in first.",
   });
 }
 

@@ -48,6 +48,15 @@ const serverStateSync = {
   saveTimer: null,
   lastMeta: null,
 };
+const authState = {
+  checked: false,
+  authenticated: false,
+  passwordConfigured: true,
+  usingBootstrapPassword: false,
+};
+const appBoot = {
+  started: false,
+};
 let editingReminderId = null;
 let editingTaskId = null;
 let editingIdeaId = null;
@@ -61,12 +70,18 @@ let microsoftSession = {
 };
 
 const elements = {
+  authOverlay: document.querySelector("#authOverlay"),
+  authForm: document.querySelector("#authForm"),
+  authPassword: document.querySelector("#authPassword"),
+  authStatus: document.querySelector("#authStatus"),
+  authHelpText: document.querySelector("#authHelpText"),
   voiceToggle: document.querySelector("#voiceToggle"),
   themeToggle: document.querySelector("#themeToggle"),
   quickLinks: document.querySelector("#quickLinks"),
   addQuickLink: document.querySelector("#addQuickLink"),
   quoteText: document.querySelector("#quoteText"),
   editQuote: document.querySelector("#editQuote"),
+  openSecuritySettings: document.querySelector("#openSecuritySettings"),
   openReminders: document.querySelector("#openReminders"),
   closeReminders: document.querySelector("#closeReminders"),
   remindersDialog: document.querySelector("#remindersDialog"),
@@ -106,6 +121,14 @@ const elements = {
   smsSettingsStatus: document.querySelector("#smsSettingsStatus"),
   saveSmsSettings: document.querySelector("#saveSmsSettings"),
   sendSmsTest: document.querySelector("#sendSmsTest"),
+  securitySettingsDialog: document.querySelector("#securitySettingsDialog"),
+  closeSecuritySettings: document.querySelector("#closeSecuritySettings"),
+  securitySettingsForm: document.querySelector("#securitySettingsForm"),
+  securityCurrentPassword: document.querySelector("#securityCurrentPassword"),
+  securityNewPassword: document.querySelector("#securityNewPassword"),
+  securityConfirmPassword: document.querySelector("#securityConfirmPassword"),
+  securityStatus: document.querySelector("#securityStatus"),
+  logoutButton: document.querySelector("#logoutButton"),
   toggleRecording: document.querySelector("#toggleRecording"),
   micStatus: document.querySelector("#micStatus"),
   micSupportNote: document.querySelector("#micSupportNote"),
@@ -250,13 +273,11 @@ function initialize() {
   syncReminderRecurrenceUI();
   syncReminderEditorState();
   syncTaskTimeField();
+  syncQuickTaskTimeField();
   syncTaskEditorState();
-  setupSpeechRecognition();
-  ensureDefaultDate();
   render();
-  void Promise.all([refreshSmsStatus(), refreshTeamsStatus(), refreshGoogleCalendarStatus()]);
-  void refreshMicrosoftSession();
-  void initializeServerStateMirror();
+  renderAccessState();
+  void initializeAccess();
 }
 
 function syncIconOnlyButtonTitles() {
@@ -281,11 +302,78 @@ function configureEditorToolbarTabFlow() {
   });
 }
 
+async function initializeAccess() {
+  await refreshAccessStatus();
+  renderAccessState();
+
+  if (authState.authenticated) {
+    startAuthenticatedApp();
+  }
+}
+
+async function refreshAccessStatus() {
+  try {
+    const response = await fetch("/api/auth/status");
+    const payload = await response.json();
+    authState.checked = true;
+    authState.authenticated = Boolean(payload.authenticated);
+    authState.passwordConfigured = payload.passwordConfigured !== false;
+    authState.usingBootstrapPassword = Boolean(payload.usingBootstrapPassword);
+  } catch {
+    authState.checked = true;
+    authState.authenticated = false;
+    authState.passwordConfigured = false;
+    authState.usingBootstrapPassword = false;
+  }
+}
+
+function renderAccessState() {
+  document.body.classList.toggle("app-locked", !authState.authenticated);
+  elements.authOverlay?.classList.toggle("hidden", authState.authenticated);
+  elements.openSecuritySettings?.classList.toggle("hidden", !authState.authenticated);
+
+  if (!elements.authStatus || !elements.authHelpText) {
+    return;
+  }
+
+  if (authState.authenticated) {
+    elements.authStatus.textContent = "HAL is unlocked.";
+    elements.authHelpText.textContent = "You are signed in to this HAL session.";
+    return;
+  }
+
+  if (!authState.passwordConfigured) {
+    elements.authHelpText.textContent = "HAL needs an access password configured before it can unlock.";
+    elements.authStatus.textContent = "Set HAL_ACCESS_PASSWORD or SESSION_SECRET in the environment, then redeploy or restart.";
+    return;
+  }
+
+  elements.authHelpText.textContent = authState.usingBootstrapPassword
+    ? "Enter your current HAL password to unlock. You can change it later from Security settings."
+    : "Enter your password to open HAL.";
+  elements.authStatus.textContent = "HAL is locked until you sign in.";
+}
+
+function startAuthenticatedApp() {
+  if (appBoot.started) {
+    return;
+  }
+
+  appBoot.started = true;
+  setupSpeechRecognition();
+  ensureDefaultDate();
+  void Promise.all([refreshSmsStatus(), refreshTeamsStatus(), refreshGoogleCalendarStatus()]);
+  void refreshMicrosoftSession();
+  void initializeServerStateMirror();
+}
+
 function bindEvents() {
+  on(elements.authForm, "submit", submitAuthForm);
   on(elements.voiceToggle, "click", toggleVoiceResponses);
   on(elements.themeToggle, "click", toggleTheme);
   on(elements.addQuickLink, "click", addQuickLink);
   on(elements.editQuote, "click", editQuote);
+  on(elements.openSecuritySettings, "click", openSecuritySettingsDialog);
   on(elements.openReminders, "click", () => elements.remindersDialog.showModal());
   on(elements.closeReminders, "click", () => elements.remindersDialog.close());
   on(elements.openBackups, "click", openBackupDialog);
@@ -306,6 +394,9 @@ function bindEvents() {
   on(elements.sendTeamsTest, "click", sendTeamsTest);
   on(elements.saveSmsSettings, "click", saveSmsSettings);
   on(elements.sendSmsTest, "click", sendSmsTest);
+  on(elements.closeSecuritySettings, "click", () => elements.securitySettingsDialog?.close());
+  on(elements.securitySettingsForm, "submit", saveSecuritySettings);
+  on(elements.logoutButton, "click", logoutHalAccess);
   on(elements.toggleRecording, "click", toggleRecording);
   on(elements.captureForm, "submit", saveCapture);
   on(elements.content, "input", previewCapture);
@@ -2380,6 +2471,111 @@ async function refreshMicrosoftSession() {
   renderTeamsStatus();
   syncMyDayCalendarUI();
   void syncCsvCalendar(true);
+}
+
+async function submitAuthForm(event) {
+  event.preventDefault();
+  if (!elements.authPassword || !elements.authStatus) {
+    return;
+  }
+
+  const password = elements.authPassword.value;
+  if (!password) {
+    elements.authStatus.textContent = "Enter your password first.";
+    return;
+  }
+
+  elements.authStatus.textContent = "Unlocking HAL...";
+
+  try {
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "HAL could not unlock.");
+    }
+
+    elements.authPassword.value = "";
+    authState.authenticated = true;
+    authState.checked = true;
+    authState.passwordConfigured = payload.status?.passwordConfigured !== false;
+    authState.usingBootstrapPassword = Boolean(payload.status?.usingBootstrapPassword);
+    renderAccessState();
+    startAuthenticatedApp();
+    setMicStatus("HAL unlocked.", "");
+  } catch (error) {
+    authState.authenticated = false;
+    renderAccessState();
+    elements.authStatus.textContent = error.message || "HAL could not unlock.";
+  }
+}
+
+function openSecuritySettingsDialog() {
+  elements.securityStatus.textContent = authState.usingBootstrapPassword
+    ? "HAL is still using the bootstrap password. Updating it here will store your own app password."
+    : "Use a strong password you can keep somewhere safe.";
+  elements.securitySettingsDialog?.showModal();
+}
+
+async function saveSecuritySettings(event) {
+  event.preventDefault();
+
+  const currentPassword = elements.securityCurrentPassword?.value || "";
+  const newPassword = elements.securityNewPassword?.value || "";
+  const confirmPassword = elements.securityConfirmPassword?.value || "";
+
+  if (newPassword !== confirmPassword) {
+    elements.securityStatus.textContent = "The new passwords do not match.";
+    return;
+  }
+
+  if (newPassword.length < 8) {
+    elements.securityStatus.textContent = "Use a password with at least 8 characters.";
+    return;
+  }
+
+  elements.securityStatus.textContent = "Updating password...";
+
+  try {
+    const response = await fetch("/api/auth/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        currentPassword,
+        newPassword,
+      }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "HAL could not update the password.");
+    }
+
+    elements.securityCurrentPassword.value = "";
+    elements.securityNewPassword.value = "";
+    elements.securityConfirmPassword.value = "";
+    authState.usingBootstrapPassword = false;
+    elements.securityStatus.textContent = "Password updated.";
+    setMicStatus("Security settings updated.", "");
+  } catch (error) {
+    elements.securityStatus.textContent = error.message || "HAL could not update the password.";
+  }
+}
+
+async function logoutHalAccess() {
+  try {
+    await fetch("/api/auth/logout", { method: "POST" });
+  } catch {
+    // Even if the request fails, treat the local session as closed.
+  }
+
+  authState.authenticated = false;
+  appBoot.started = false;
+  renderAccessState();
+  elements.securitySettingsDialog?.close();
+  setMicStatus("HAL locked.", "");
 }
 
 function syncMyDayCalendarUI() {

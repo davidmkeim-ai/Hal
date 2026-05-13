@@ -30,10 +30,13 @@ Set these environment variables locally or in Vercel:
 
 ```env
 HAL_STORAGE_PROVIDER=supabase
+HAL_ACCESS_PASSWORD=choose-a-strong-password
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 HAL_SUPABASE_STATE_KEY=default
 ```
+
+`HAL_ACCESS_PASSWORD` is the cleanest way to bootstrap the first hosted login. After you sign in, HAL's Security settings can store an updated password inside HAL's backend state.
 
 ## Step 4: Deploy Hosting
 

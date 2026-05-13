@@ -26,6 +26,10 @@ export const config = {
     serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
     stateKey: process.env.HAL_SUPABASE_STATE_KEY || "default",
   },
+  auth: {
+    bootstrapPassword: process.env.HAL_ACCESS_PASSWORD || process.env.SESSION_SECRET || "",
+    stateKey: process.env.HAL_AUTH_STATE_KEY || "_auth",
+  },
   openai: {
     apiKey: process.env.OPENAI_API_KEY || "",
     model: process.env.HAL_AI_MODEL || "gpt-5-mini",
@@ -88,4 +92,8 @@ export function isGoogleCalendarConfigured() {
 
 export function isSupabaseConfigured() {
   return Boolean(config.supabase.url && config.supabase.serviceRoleKey);
+}
+
+export function isPasswordBootstrapConfigured() {
+  return Boolean(config.auth.bootstrapPassword);
 }

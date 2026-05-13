@@ -56,6 +56,10 @@ body[data-theme="light"] {
     linear-gradient(180deg, #fff9f0 0%, #ffe8cf 48%, #fff5e8 100%);
 }
 
+body.app-locked {
+  overflow: hidden;
+}
+
 button,
 input,
 select,
@@ -355,6 +359,64 @@ body[data-theme="light"] .quick-link-fallback {
   gap: 20px;
 }
 
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(5, 8, 14, 0.78);
+  backdrop-filter: blur(14px);
+  z-index: 40;
+}
+
+body[data-theme="light"] .auth-overlay {
+  background: rgba(255, 247, 236, 0.78);
+}
+
+.auth-card {
+  width: min(100%, 420px);
+  display: grid;
+  gap: 14px;
+  padding: 28px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(15, 23, 38, 0.98), rgba(9, 14, 24, 0.96));
+  box-shadow: var(--shadow);
+}
+
+body[data-theme="light"] .auth-card {
+  background: linear-gradient(180deg, rgba(255, 248, 239, 0.99), rgba(255, 240, 221, 0.97));
+}
+
+.auth-title {
+  margin: -4px 0 0;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 2rem;
+}
+
+.auth-form {
+  display: grid;
+  gap: 10px;
+}
+
+.auth-form input {
+  min-height: 48px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(4, 8, 14, 0.9);
+  color: var(--text);
+  padding: 0 16px;
+}
+
+body[data-theme="light"] .auth-form input {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.auth-status {
+  margin: 0;
+}
+
 .top-bar {
   display: grid;
   grid-template-columns: minmax(300px, 420px) minmax(0, 1fr);
@@ -414,6 +476,16 @@ body[data-theme="light"] .command-panel {
   width: 30px;
   height: 30px;
   min-height: 30px;
+}
+
+.lock-svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .command-status-wrap {
@@ -1718,6 +1790,14 @@ body[data-theme="light"] .item-card {
 
 .reminders-dialog::backdrop {
   background: rgba(3, 6, 12, 0.72);
+}
+
+.security-dialog .reminder-form {
+  margin-top: 8px;
+}
+
+.security-actions {
+  justify-content: space-between;
 }
 
 @keyframes hal-pulse {
