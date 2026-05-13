@@ -2569,7 +2569,10 @@ async function submitAuthForm(event) {
     if (elements.authRememberDevice) {
       elements.authRememberDevice.checked = false;
     }
-    await refreshAccessStatus();
+    authState.checked = true;
+    authState.authenticated = true;
+    authState.passwordConfigured = payload.status?.passwordConfigured !== false;
+    authState.usingBootstrapPassword = Boolean(payload.status?.usingBootstrapPassword);
     renderAccessState();
     await startAuthenticatedApp();
     setMicStatus("HAL unlocked.", "");
@@ -2669,8 +2672,11 @@ async function tryRestoreRememberedAccess() {
       throw new Error(payload.error || "HAL could not restore the remembered device session.");
     }
 
-    await refreshAccessStatus();
-    return authState.authenticated;
+    authState.checked = true;
+    authState.authenticated = true;
+    authState.passwordConfigured = payload.status?.passwordConfigured !== false;
+    authState.usingBootstrapPassword = Boolean(payload.status?.usingBootstrapPassword);
+    return true;
   } catch {
     localStorage.removeItem(STORAGE_KEYS.remember);
     authState.authenticated = false;
