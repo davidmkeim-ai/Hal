@@ -64,7 +64,7 @@ app.get("/api/health", (_request, response) => {
 app.get("/api/auth/status", async (request, response) => {
   try {
     const status = await getHalAuthStatus({
-      authenticated: hasValidHalAuthCookie(request),
+      authenticated: hasValidHalAccess(request),
     });
     response.json(status);
   } catch (error) {
@@ -189,7 +189,7 @@ app.use("/api", requireHalAuthentication);
 
 app.get("/api/session", (request, response) => {
   response.json({
-    appAuthenticated: hasValidHalAuthCookie(request),
+    appAuthenticated: hasValidHalAccess(request),
     authenticated: Boolean(request.session.account),
     user: request.session.account
       ? {
@@ -578,7 +578,7 @@ function registerStaticAssetRoutes(expressApp) {
 }
 
 function requireHalAuthentication(request, response, next) {
-  if (hasValidHalAuthCookie(request)) {
+  if (hasValidHalAccess(request)) {
     next();
     return;
   }
@@ -586,6 +586,10 @@ function requireHalAuthentication(request, response, next) {
   response.status(401).json({
     error: "HAL is locked. Sign in first.",
   });
+}
+
+function hasValidHalAccess(request) {
+  return hasValidHalAuthCookie(request) || hasValidRememberHeader(request);
 }
 
 function hasValidHalAuthCookie(request) {
@@ -596,6 +600,15 @@ function hasValidHalAuthCookie(request) {
   }
 
   return verifyHalAuthCookieValue(candidate);
+}
+
+function hasValidRememberHeader(request) {
+  const candidate = String(request.headers["x-hal-remember"] || "");
+  if (!candidate) {
+    return false;
+  }
+
+  return verifyHalRememberToken(candidate);
 }
 
 function buildHalAuthCookieValue() {

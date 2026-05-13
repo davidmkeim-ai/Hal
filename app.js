@@ -58,6 +58,7 @@ const authState = {
 const appBoot = {
   started: false,
 };
+const nativeFetch = window.fetch.bind(window);
 let editingReminderId = null;
 let editingTaskId = null;
 let editingIdeaId = null;
@@ -262,6 +263,29 @@ const elements = {
 };
 
 initialize();
+
+window.fetch = function halFetch(input, init = {}) {
+  const requestUrl = typeof input === "string"
+    ? new URL(input, window.location.origin)
+    : new URL(input.url, window.location.origin);
+
+  const isHalApiRequest = requestUrl.origin === window.location.origin && requestUrl.pathname.startsWith("/api/");
+  if (!isHalApiRequest) {
+    return nativeFetch(input, init);
+  }
+
+  const headers = new Headers(init.headers || (typeof input !== "string" ? input.headers : undefined) || {});
+  const rememberToken = localStorage.getItem(STORAGE_KEYS.remember);
+  if (rememberToken) {
+    headers.set("X-HAL-Remember", rememberToken);
+  }
+
+  return nativeFetch(input, {
+    ...init,
+    credentials: "include",
+    headers,
+  });
+};
 
 function initialize() {
   applyTheme(state.theme || "dark");
