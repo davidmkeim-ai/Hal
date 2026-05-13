@@ -55,6 +55,16 @@ const authState = {
   passwordConfigured: true,
   usingBootstrapPassword: false,
 };
+const authDebug = {
+  env: isHostedEnvironment() ? "hosted" : "local",
+  rememberTokenPresent: false,
+  lastStatus: "not-run",
+  lastRestore: "not-run",
+  lastLogin: "not-run",
+  lastBoot: "not-started",
+  lastHydration: "not-run",
+  lastError: "",
+};
 const appBoot = {
   started: false,
 };
@@ -78,6 +88,7 @@ const elements = {
   authRememberDevice: document.querySelector("#authRememberDevice"),
   authStatus: document.querySelector("#authStatus"),
   authHelpText: document.querySelector("#authHelpText"),
+  authDebugOutput: document.querySelector("#authDebugOutput"),
   voiceToggle: document.querySelector("#voiceToggle"),
   themeToggle: document.querySelector("#themeToggle"),
   quickLinks: document.querySelector("#quickLinks"),
@@ -288,6 +299,10 @@ window.fetch = function halFetch(input, init = {}) {
 initialize();
 
 function initialize() {
+  updateAuthDebugState({
+    rememberTokenPresent: Boolean(localStorage.getItem(STORAGE_KEYS.remember)),
+    lastBoot: "initialize() started",
+  });
   applyTheme(state.theme || "dark");
   syncIconOnlyButtonTitles();
   configureEditorToolbarTabFlow();
@@ -304,6 +319,36 @@ function initialize() {
   render();
   renderAccessState();
   void initializeAccess();
+}
+
+function updateAuthDebugState(patch = {}) {
+  Object.assign(authDebug, patch);
+  renderAuthDebug();
+}
+
+function renderAuthDebug() {
+  if (!elements.authDebugOutput) {
+    return;
+  }
+
+  const lines = [
+    `env: ${authDebug.env}`,
+    `remember token present: ${authDebug.rememberTokenPresent ? "yes" : "no"}`,
+    `auth checked: ${authState.checked ? "yes" : "no"}`,
+    `authenticated: ${authState.authenticated ? "yes" : "no"}`,
+    `status check: ${authDebug.lastStatus}`,
+    `remember restore: ${authDebug.lastRestore}`,
+    `login flow: ${authDebug.lastLogin}`,
+    `boot: ${authDebug.lastBoot}`,
+    `hydration: ${authDebug.lastHydration}`,
+    `theme: ${state.theme || "dark"}`,
+  ];
+
+  if (authDebug.lastError) {
+    lines.push(`last error: ${authDebug.lastError}`);
+  }
+
+  elements.authDebugOutput.textContent = lines.join("\n");
 }
 
 function syncIconOnlyButtonTitles() {
@@ -335,6 +380,10 @@ function bindPasswordRevealButtons() {
 }
 
 async function initializeAccess() {
+  updateAuthDebugState({
+    rememberTokenPresent: Boolean(localStorage.getItem(STORAGE_KEYS.remember)),
+    lastBoot: "initializeAccess() running",
+  });
   await refreshAccessStatus();
   if (!authState.authenticated) {
     await tryRestoreRememberedAccess();
@@ -342,7 +391,14 @@ async function initializeAccess() {
   renderAccessState();
 
   if (authState.authenticated) {
+    updateAuthDebugState({
+      lastBoot: "authenticated before app boot",
+    });
     await startAuthenticatedApp();
+  } else {
+    updateAuthDebugState({
+      lastBoot: "stopped at login screen",
+    });
   }
 }
 
@@ -356,11 +412,19 @@ async function refreshAccessStatus() {
     authState.authenticated = Boolean(payload.authenticated);
     authState.passwordConfigured = payload.passwordConfigured !== false;
     authState.usingBootstrapPassword = Boolean(payload.usingBootstrapPassword);
+    updateAuthDebugState({
+      lastStatus: payload.authenticated ? "authenticated" : "unauthenticated",
+      lastError: "",
+    });
   } catch {
     authState.checked = true;
     authState.authenticated = false;
     authState.passwordConfigured = false;
     authState.usingBootstrapPassword = false;
+    updateAuthDebugState({
+      lastStatus: "error",
+      lastError: "status check failed",
+    });
   }
 }
 
@@ -368,6 +432,7 @@ function renderAccessState() {
   document.body.classList.toggle("app-locked", !authState.authenticated);
   elements.authOverlay?.classList.toggle("hidden", authState.authenticated);
   elements.openSecuritySettings?.classList.toggle("hidden", !authState.authenticated);
+  renderAuthDebug();
 
   if (!elements.authStatus || !elements.authHelpText) {
     return;
@@ -412,15 +477,24 @@ function togglePasswordReveal(button) {
 
 async function startAuthenticatedApp() {
   if (appBoot.started) {
+    updateAuthDebugState({
+      lastBoot: "startAuthenticatedApp skipped (already started)",
+    });
     return;
   }
 
   appBoot.started = true;
+  updateAuthDebugState({
+    lastBoot: "startAuthenticatedApp running",
+  });
   setupSpeechRecognition();
   ensureDefaultDate();
   void Promise.all([refreshSmsStatus(), refreshTeamsStatus(), refreshGoogleCalendarStatus()]);
   await initializeServerStateMirror();
   await refreshMicrosoftSession();
+  updateAuthDebugState({
+    lastBoot: "authenticated app boot complete",
+  });
 }
 
 function bindEvents() {
@@ -2546,6 +2620,10 @@ async function submitAuthForm(event) {
   }
 
   elements.authStatus.textContent = "Unlocking HAL...";
+  updateAuthDebugState({
+    lastLogin: `submitting (${rememberDevice ? "remembered" : "session-only"})`,
+    lastError: "",
+  });
 
   try {
     const response = await fetch("/api/auth/login", {
@@ -2564,6 +2642,9 @@ async function submitAuthForm(event) {
     } else {
       localStorage.removeItem(STORAGE_KEYS.remember);
     }
+    updateAuthDebugState({
+      rememberTokenPresent: Boolean(localStorage.getItem(STORAGE_KEYS.remember)),
+    });
 
     elements.authPassword.value = "";
     if (elements.authRememberDevice) {
@@ -2573,12 +2654,19 @@ async function submitAuthForm(event) {
     authState.authenticated = true;
     authState.passwordConfigured = payload.status?.passwordConfigured !== false;
     authState.usingBootstrapPassword = Boolean(payload.status?.usingBootstrapPassword);
+    updateAuthDebugState({
+      lastLogin: "success",
+    });
     renderAccessState();
     await startAuthenticatedApp();
     setMicStatus("HAL unlocked.", "");
   } catch (error) {
     authState.authenticated = false;
     appBoot.started = false;
+    updateAuthDebugState({
+      lastLogin: "failed",
+      lastError: error.message || "HAL could not unlock.",
+    });
     renderAccessState();
     elements.authStatus.textContent = error.message || "HAL could not unlock.";
   }
@@ -2649,6 +2737,11 @@ async function logoutHalAccess() {
   localStorage.removeItem(STORAGE_KEYS.remember);
   authState.authenticated = false;
   appBoot.started = false;
+  updateAuthDebugState({
+    rememberTokenPresent: false,
+    lastLogin: "logged out",
+    lastBoot: "reset after logout",
+  });
   renderAccessState();
   elements.securitySettingsDialog?.close();
   setMicStatus("HAL locked.", "");
@@ -2657,8 +2750,16 @@ async function logoutHalAccess() {
 async function tryRestoreRememberedAccess() {
   const token = localStorage.getItem(STORAGE_KEYS.remember);
   if (!token) {
+    updateAuthDebugState({
+      rememberTokenPresent: false,
+      lastRestore: "no token found",
+    });
     return false;
   }
+  updateAuthDebugState({
+    rememberTokenPresent: true,
+    lastRestore: "attempting restore",
+  });
 
   try {
     const response = await fetch("/api/auth/restore", {
@@ -2676,10 +2777,19 @@ async function tryRestoreRememberedAccess() {
     authState.authenticated = true;
     authState.passwordConfigured = payload.status?.passwordConfigured !== false;
     authState.usingBootstrapPassword = Boolean(payload.status?.usingBootstrapPassword);
+    updateAuthDebugState({
+      lastRestore: "restore succeeded",
+      lastError: "",
+    });
     return true;
   } catch {
     localStorage.removeItem(STORAGE_KEYS.remember);
     authState.authenticated = false;
+    updateAuthDebugState({
+      rememberTokenPresent: false,
+      lastRestore: "restore failed",
+      lastError: "remember restore failed",
+    });
     return false;
   }
 }
@@ -3426,9 +3536,19 @@ async function initializeServerStateMirror() {
       if (serverHasData) {
         restoreFromBackupPayload(serverData);
         render();
+        updateAuthDebugState({
+          lastHydration: `hosted: loaded cloud state (${serverScore})`,
+        });
         setMicStatus("Loaded HAL data from the cloud.", "");
       } else if (localHasData) {
+        updateAuthDebugState({
+          lastHydration: `hosted: pushed local state (${localScore})`,
+        });
         await saveStateToServer();
+      } else {
+        updateAuthDebugState({
+          lastHydration: "hosted: no local or cloud data",
+        });
       }
       return true;
     }
@@ -3436,8 +3556,14 @@ async function initializeServerStateMirror() {
     if (!localHasData && serverHasData) {
       restoreFromBackupPayload(serverData);
       render();
+      updateAuthDebugState({
+        lastHydration: "local: restored server mirror",
+      });
       setMicStatus("Recovered HAL data from the local mirror.", "");
     } else if (localHasData && !serverHasData) {
+      updateAuthDebugState({
+        lastHydration: "local: pushed local state to mirror",
+      });
       await saveStateToServer();
     } else if (localHasData && serverHasData) {
       const localSavedAt = Date.parse(state._meta?.savedAt || 0);
@@ -3446,13 +3572,27 @@ async function initializeServerStateMirror() {
       if (serverLooksMoreComplete || (serverSavedAt > localSavedAt && localSavedAt > 0)) {
         restoreFromBackupPayload(serverData);
         render();
+        updateAuthDebugState({
+          lastHydration: "local: loaded newer server mirror",
+        });
         setMicStatus("Loaded the newer HAL data from the local mirror.", "");
       } else {
+        updateAuthDebugState({
+          lastHydration: "local: kept local state and synced",
+        });
         await saveStateToServer();
       }
+    } else {
+      updateAuthDebugState({
+        lastHydration: "local: no meaningful state detected",
+      });
     }
     return true;
-  } catch {
+  } catch (error) {
+    updateAuthDebugState({
+      lastHydration: "state mirror failed",
+      lastError: error?.message || "state mirror failed",
+    });
     setMicStatus("HAL could not load saved data yet.", "Try refreshing once. If this keeps happening, HAL may need to re-check the hosted sign-in cookie.");
     return false;
   } finally {

@@ -37,6 +37,37 @@ body[data-theme="light"] {
   display: none !important;
 }
 
+.auth-debug-panel {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(8, 13, 22, 0.55);
+}
+
+body[data-theme="light"] .auth-debug-panel {
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.auth-debug-title {
+  margin: 0 0 8px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+
+.auth-debug-output {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--muted);
+  font-family: "IBM Plex Sans", sans-serif;
+}
+
 html,
 body {
   margin: 0;
