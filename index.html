@@ -189,7 +189,12 @@
       <h1 class="auth-title">Unlock HAL</h1>
       <p class="dialog-note" id="authHelpText">Enter your password to open HAL.</p>
       <form id="authForm" class="auth-form">
-        <input id="authPassword" type="password" autocomplete="current-password" placeholder="Enter password">
+        <div class="password-field">
+          <input id="authPassword" type="password" autocomplete="current-password" placeholder="Enter password">
+          <button class="password-reveal-button" data-target="authPassword" type="button" aria-label="Show password" title="Show password">
+            <span class="password-eye-icon" aria-hidden="true"></span>
+          </button>
+        </div>
         <button class="primary-button" id="authSubmit" type="submit">Unlock</button>
       </form>
       <p class="dialog-note auth-status" id="authStatus">HAL is locked until you sign in.</p>
@@ -324,9 +329,24 @@
       <button class="ghost-button" id="closeSecuritySettings" type="button">Close</button>
     </div>
     <form id="securitySettingsForm" class="reminder-form">
-      <input id="securityCurrentPassword" type="password" autocomplete="current-password" placeholder="Current password">
-      <input id="securityNewPassword" type="password" autocomplete="new-password" placeholder="New password">
-      <input id="securityConfirmPassword" type="password" autocomplete="new-password" placeholder="Confirm new password">
+      <div class="password-field">
+        <input id="securityCurrentPassword" type="password" autocomplete="current-password" placeholder="Current password">
+        <button class="password-reveal-button" data-target="securityCurrentPassword" type="button" aria-label="Show current password" title="Show current password">
+          <span class="password-eye-icon" aria-hidden="true"></span>
+        </button>
+      </div>
+      <div class="password-field">
+        <input id="securityNewPassword" type="password" autocomplete="new-password" placeholder="New password">
+        <button class="password-reveal-button" data-target="securityNewPassword" type="button" aria-label="Show new password" title="Show new password">
+          <span class="password-eye-icon" aria-hidden="true"></span>
+        </button>
+      </div>
+      <div class="password-field">
+        <input id="securityConfirmPassword" type="password" autocomplete="new-password" placeholder="Confirm new password">
+        <button class="password-reveal-button" data-target="securityConfirmPassword" type="button" aria-label="Show confirm password" title="Show confirm password">
+          <span class="password-eye-icon" aria-hidden="true"></span>
+        </button>
+      </div>
       <div class="reminder-form-actions security-actions">
         <button class="ghost-button" id="logoutButton" type="button">Log out</button>
         <button class="primary-button" id="saveSecuritySettings" type="submit">Update password</button>

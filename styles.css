@@ -417,6 +417,66 @@ body[data-theme="light"] .auth-form input {
   margin: 0;
 }
 
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  width: 100%;
+  padding-right: 48px;
+}
+
+.password-reveal-button {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+}
+
+body[data-theme="light"] .password-reveal-button {
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.password-eye-icon {
+  position: relative;
+  display: block;
+  width: 16px;
+  height: 10px;
+  margin: 0 auto;
+  border: 1.6px solid currentColor;
+  border-radius: 999px / 70%;
+}
+
+.password-eye-icon::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: currentColor;
+  transform: translate(-50%, -50%);
+}
+
+.password-reveal-button.is-revealed .password-eye-icon::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  top: 50%;
+  height: 1.6px;
+  background: currentColor;
+  transform: rotate(-24deg);
+  transform-origin: center;
+}
+
 .top-bar {
   display: grid;
   grid-template-columns: minmax(300px, 420px) minmax(0, 1fr);

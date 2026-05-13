@@ -302,6 +302,12 @@ function configureEditorToolbarTabFlow() {
   });
 }
 
+function bindPasswordRevealButtons() {
+  document.querySelectorAll(".password-reveal-button").forEach((button) => {
+    button.addEventListener("click", () => togglePasswordReveal(button));
+  });
+}
+
 async function initializeAccess() {
   await refreshAccessStatus();
   renderAccessState();
@@ -354,6 +360,25 @@ function renderAccessState() {
   elements.authStatus.textContent = "HAL is locked until you sign in.";
 }
 
+function togglePasswordReveal(button) {
+  const targetId = button?.dataset?.target;
+  if (!targetId) {
+    return;
+  }
+
+  const input = document.getElementById(targetId);
+  if (!input) {
+    return;
+  }
+
+  const showing = input.type === "text";
+  input.type = showing ? "password" : "text";
+  button.classList.toggle("is-revealed", !showing);
+  const nextLabel = showing ? "Show password" : "Hide password";
+  button.setAttribute("aria-label", nextLabel);
+  button.setAttribute("title", nextLabel);
+}
+
 function startAuthenticatedApp() {
   if (appBoot.started) {
     return;
@@ -368,6 +393,7 @@ function startAuthenticatedApp() {
 }
 
 function bindEvents() {
+  bindPasswordRevealButtons();
   on(elements.authForm, "submit", submitAuthForm);
   on(elements.voiceToggle, "click", toggleVoiceResponses);
   on(elements.themeToggle, "click", toggleTheme);

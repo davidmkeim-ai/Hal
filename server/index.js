@@ -90,9 +90,18 @@ app.post("/api/auth/login", async (request, response) => {
 
     request.session.halAuthenticated = true;
     const status = await getHalAuthStatus({ authenticated: true });
-    response.json({
-      ok: true,
-      status,
+    request.session.save((error) => {
+      if (error) {
+        response.status(500).json({
+          error: "HAL unlocked, but the session could not be saved.",
+        });
+        return;
+      }
+
+      response.json({
+        ok: true,
+        status,
+      });
     });
   } catch (error) {
     response.status(500).json({
