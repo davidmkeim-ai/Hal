@@ -314,7 +314,7 @@ async function initializeAccess() {
   renderAccessState();
 
   if (authState.authenticated) {
-    startAuthenticatedApp();
+    await startAuthenticatedApp();
   }
 }
 
@@ -380,7 +380,7 @@ function togglePasswordReveal(button) {
   button.setAttribute("title", nextLabel);
 }
 
-function startAuthenticatedApp() {
+async function startAuthenticatedApp() {
   if (appBoot.started) {
     return;
   }
@@ -389,8 +389,8 @@ function startAuthenticatedApp() {
   setupSpeechRecognition();
   ensureDefaultDate();
   void Promise.all([refreshSmsStatus(), refreshTeamsStatus(), refreshGoogleCalendarStatus()]);
-  void refreshMicrosoftSession();
-  void initializeServerStateMirror();
+  await initializeServerStateMirror();
+  await refreshMicrosoftSession();
 }
 
 function bindEvents() {
@@ -2530,15 +2530,13 @@ async function submitAuthForm(event) {
     if (elements.authRememberDevice) {
       elements.authRememberDevice.checked = false;
     }
-    authState.authenticated = true;
-    authState.checked = true;
-    authState.passwordConfigured = payload.status?.passwordConfigured !== false;
-    authState.usingBootstrapPassword = Boolean(payload.status?.usingBootstrapPassword);
+    await refreshAccessStatus();
     renderAccessState();
-    startAuthenticatedApp();
+    await startAuthenticatedApp();
     setMicStatus("HAL unlocked.", "");
   } catch (error) {
     authState.authenticated = false;
+    appBoot.started = false;
     renderAccessState();
     elements.authStatus.textContent = error.message || "HAL could not unlock.";
   }
@@ -3359,8 +3357,10 @@ async function initializeServerStateMirror() {
         await saveStateToServer();
       }
     }
+    return true;
   } catch {
-    // Keep HAL local-first if the local state mirror is unavailable.
+    setMicStatus("HAL could not load saved data yet.", "Try refreshing once. If this keeps happening, HAL may need to re-check the hosted sign-in cookie.");
+    return false;
   } finally {
     serverStateSync.hydrated = true;
   }
