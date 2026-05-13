@@ -3339,6 +3339,8 @@ async function initializeServerStateMirror() {
     serverStateSync.lastMeta = payload.meta || null;
     const localHasData = hasMeaningfulHalData(state);
     const serverHasData = hasMeaningfulHalData(serverData);
+    const localScore = calculateMeaningfulHalDataScore(state);
+    const serverScore = calculateMeaningfulHalDataScore(serverData);
 
     if (!localHasData && serverHasData) {
       restoreFromBackupPayload(serverData);
@@ -3349,7 +3351,8 @@ async function initializeServerStateMirror() {
     } else if (localHasData && serverHasData) {
       const localSavedAt = Date.parse(state._meta?.savedAt || 0);
       const serverSavedAt = Date.parse(serverData._meta?.savedAt || 0);
-      if (serverSavedAt > localSavedAt && localSavedAt > 0) {
+      const serverLooksMoreComplete = serverScore > localScore;
+      if (serverLooksMoreComplete || (serverSavedAt > localSavedAt && localSavedAt > 0)) {
         restoreFromBackupPayload(serverData);
         render();
         setMicStatus("Loaded the newer HAL data from the local mirror.", "");
@@ -3394,21 +3397,25 @@ async function saveStateToServer() {
 }
 
 function hasMeaningfulHalData(source) {
+  return calculateMeaningfulHalDataScore(source) > 0;
+}
+
+function calculateMeaningfulHalDataScore(source) {
   if (!source || typeof source !== "object") {
-    return false;
+    return 0;
   }
 
-  return Boolean(
-    (Array.isArray(source.tasks) && source.tasks.length) ||
-    (Array.isArray(source.ideas) && source.ideas.length) ||
-    (Array.isArray(source.meetingNotes) && source.meetingNotes.length) ||
-    (Array.isArray(source.reminders) && source.reminders.length) ||
-    (Array.isArray(source.calendarEvents) && source.calendarEvents.length) ||
-    (Array.isArray(source.followUps) && source.followUps.length) ||
-    (Array.isArray(source.audioInbox) && source.audioInbox.length) ||
-    (Array.isArray(source.quickLinks) && source.quickLinks.length > 4) ||
-    (typeof source.quote === "string" && source.quote !== "Build the life and systems you want to live inside.")
-  );
+  let score = 0;
+  score += Array.isArray(source.tasks) ? source.tasks.length * 6 : 0;
+  score += Array.isArray(source.ideas) ? source.ideas.length * 5 : 0;
+  score += Array.isArray(source.meetingNotes) ? source.meetingNotes.length * 5 : 0;
+  score += Array.isArray(source.reminders) ? source.reminders.length * 4 : 0;
+  score += Array.isArray(source.calendarEvents) ? source.calendarEvents.length * 2 : 0;
+  score += Array.isArray(source.followUps) ? source.followUps.length * 3 : 0;
+  score += Array.isArray(source.audioInbox) ? source.audioInbox.length : 0;
+  score += Array.isArray(source.quickLinks) && source.quickLinks.length > 4 ? source.quickLinks.length - 4 : 0;
+  score += typeof source.quote === "string" && source.quote !== "Build the life and systems you want to live inside." ? 1 : 0;
+  return score;
 }
 
 function setTaskCompletion(task, isComplete) {
