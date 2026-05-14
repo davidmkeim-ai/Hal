@@ -2833,6 +2833,10 @@ async function syncCsvCalendar(silent = false) {
     return;
   }
 
+  if (!isLocalHalHost()) {
+    await refreshHostedCalendarSettingsFromServer();
+  }
+
   const uploadedCsvContent = state.calendarSettings?.uploadedCsvContent || "";
   if (elements.myDayCalendarStatus) {
     elements.myDayCalendarStatus.textContent = uploadedCsvContent
@@ -2876,6 +2880,39 @@ async function syncCsvCalendar(silent = false) {
       setMicStatus(error.message || "HAL could not read the calendar.", "");
       speakHal("HAL could not read the calendar.");
     }
+  }
+}
+
+async function refreshHostedCalendarSettingsFromServer() {
+  try {
+    const response = await fetch("/api/state", {
+      credentials: "include",
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "HAL could not refresh the hosted calendar state.");
+    }
+
+    const remoteSettings = payload.state?.calendarSettings || {};
+    const nextUploadedContent = remoteSettings.uploadedCsvContent || "";
+    const nextUploadedName = remoteSettings.uploadedCsvName || "";
+    const nextImportedAt = remoteSettings.uploadedCsvImportedAt || "";
+
+    const changed =
+      nextUploadedContent !== (state.calendarSettings?.uploadedCsvContent || "") ||
+      nextUploadedName !== (state.calendarSettings?.uploadedCsvName || "") ||
+      nextImportedAt !== (state.calendarSettings?.uploadedCsvImportedAt || "");
+
+    if (changed) {
+      state.calendarSettings = {
+        ...state.calendarSettings,
+        uploadedCsvContent: nextUploadedContent,
+        uploadedCsvName: nextUploadedName,
+        uploadedCsvImportedAt: nextImportedAt,
+      };
+    }
+  } catch {
+    // Keep the current in-memory copy if the hosted refresh check fails.
   }
 }
 

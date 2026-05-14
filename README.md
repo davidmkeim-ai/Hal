@@ -20,6 +20,7 @@ A lightweight scaffold for a personal assistant app that helps capture notes, or
 - A reusable server-side state store module so the current file mirror can later be swapped for a hosted database with less frontend churn
 - Browser-uploaded calendar CSV support so `My Day` can work without depending on a server-local calendar file
 - Optional Supabase-backed state storage for a free-hosting path
+- A local calendar CSV sync script that can push your OneDrive-backed `calendar_export.csv` into Supabase-backed HAL state
 - A Vercel-ready Express entry point and routing config so HAL can be hosted without changing the local workflow
 - Teams activity-feed reminder notification scaffolding using Microsoft Graph
 - SMS reminder delivery scaffolding with saved phone settings and a backend test route
@@ -48,6 +49,7 @@ HAL is designed to be iterated locally first. Microsoft integrations are optiona
 - [docs/entra-app-registration.md](C:\Users\dmk\OneDrive - RW Supply + Design\Personal Assistant App\docs\entra-app-registration.md)
 - [docs/online-migration-plan.md](C:\Users\dmk\OneDrive - RW Supply + Design\Personal Assistant App\docs\online-migration-plan.md)
 - [docs/free-online-setup.md](C:\Users\dmk\OneDrive - RW Supply + Design\Personal Assistant App\docs\free-online-setup.md)
+- [docs/calendar-csv-sync.md](C:\Users\dmk\OneDrive - RW Supply + Design\Personal Assistant App\docs\calendar-csv-sync.md)
 - [docs/supabase-schema.sql](C:\Users\dmk\OneDrive - RW Supply + Design\Personal Assistant App\docs\supabase-schema.sql)
 - [vercel.json](C:\Users\dmk\OneDrive - RW Supply + Design\Personal Assistant App\vercel.json)
 

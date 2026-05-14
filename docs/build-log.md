@@ -128,5 +128,13 @@
 - Added a real HAL password gate backed by the existing session middleware, with protected API routes, login/logout endpoints, and a backend password store that can use Supabase or the local data folder.
 - Added a frontend unlock screen plus Security settings so the password can be changed from inside HAL after the first sign-in.
 
+## 2026-05-14
+
+### Calendar CSV automation
+- Added a local CSV uploader script that reads `calendar_export.csv` from the configured export path and writes it into the existing Supabase-backed HAL state.
+- Added a simple Windows launcher file so the CSV uploader can be called directly from Task Scheduler without a long command.
+- Added a hosted calendar refresh improvement so the online app re-checks the cloud-backed uploaded CSV fields before parsing the schedule, which helps the hosted `My Day` view pick up a newer synced CSV while the app is already open.
+- Documented the setup in [docs/calendar-csv-sync.md](C:\Users\dmk\OneDrive - RW Supply + Design\Personal Assistant App\docs\calendar-csv-sync.md).
+
 ## Logging policy going forward
 - Continue appending major architecture, workflow, and integration changes here as HAL evolves.

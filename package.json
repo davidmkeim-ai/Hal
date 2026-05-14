@@ -9,7 +9,8 @@
   },
   "scripts": {
     "dev": "run-hal.cmd",
-    "start": "run-hal.cmd"
+    "start": "run-hal.cmd",
+    "sync:calendar-csv": "node scripts/sync-calendar-csv.js"
   },
   "dependencies": {
     "@azure/msal-node": "^3.2.0",
