@@ -165,14 +165,20 @@
             <form id="quickTaskForm" class="task-form-inline quick-task-form">
               <select id="quickTaskListSelect" aria-label="Quick task list"></select>
               <input id="quickTaskInput" type="text" maxlength="140" placeholder="Create a new task">
-              <button class="primary-button quick-task-submit" id="quickTaskSubmit" type="submit">Add task</button>
-              <input id="quickTaskDueDate" type="date">
+              <input id="quickTaskDueDate" type="date" aria-label="Task due date" title="Task due date">
+              <select id="quickTaskFlexibility" aria-label="Task flexibility" title="Task flexibility">
+                <option value="none">Hard due date</option>
+                <option value="medium" selected>Medium flexibility</option>
+                <option value="high">High flexibility</option>
+              </select>
+              <input id="quickTaskEstimatedMinutes" type="number" min="0" step="15" placeholder="Mins" aria-label="Estimated minutes" title="Estimated minutes">
               <button class="ghost-button compact-ghost-button" id="openQuickTaskNoteEditor" type="button">Note</button>
               <label class="icon-toggle" for="quickTaskHasTime" title="Set a due time">
                 <input id="quickTaskHasTime" type="checkbox">
                 <span class="clock-icon" aria-hidden="true"></span>
               </label>
               <input id="quickTaskDueTime" class="hidden" type="time">
+              <button class="primary-button quick-task-submit" id="quickTaskSubmit" type="submit">Add task</button>
               <button class="ghost-button compact-ghost-button" id="openTaskListCreator" type="button">Add list</button>
             </form>
             <div id="taskListsWidget" class="card-list"></div>
@@ -424,7 +430,13 @@
     <form id="taskForm" class="task-form-inline task-dialog-form">
       <select id="taskListSelect" aria-label="Task list"></select>
       <input id="taskInput" type="text" maxlength="140" placeholder="Add or edit a task">
-      <input id="taskDueDate" type="date">
+      <input id="taskDueDate" type="date" aria-label="Task due date" title="Task due date">
+      <select id="taskFlexibility" aria-label="Task flexibility" title="Task flexibility">
+        <option value="none">Hard due date</option>
+        <option value="medium" selected>Medium flexibility</option>
+        <option value="high">High flexibility</option>
+      </select>
+      <input id="taskEstimatedMinutes" type="number" min="0" step="15" placeholder="Estimated minutes" aria-label="Estimated minutes" title="Estimated minutes">
       <label class="icon-toggle" for="taskHasTime" title="Set a due time">
         <input id="taskHasTime" type="checkbox">
         <span class="clock-icon" aria-hidden="true"></span>

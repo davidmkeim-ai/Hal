@@ -221,6 +221,8 @@ const elements = {
   quickTaskListSelect: document.querySelector("#quickTaskListSelect"),
   quickTaskInput: document.querySelector("#quickTaskInput"),
   quickTaskDueDate: document.querySelector("#quickTaskDueDate"),
+  quickTaskFlexibility: document.querySelector("#quickTaskFlexibility"),
+  quickTaskEstimatedMinutes: document.querySelector("#quickTaskEstimatedMinutes"),
   quickTaskHasTime: document.querySelector("#quickTaskHasTime"),
   quickTaskDueTime: document.querySelector("#quickTaskDueTime"),
   openQuickTaskNoteEditor: document.querySelector("#openQuickTaskNoteEditor"),
@@ -232,6 +234,8 @@ const elements = {
   taskListSelect: document.querySelector("#taskListSelect"),
   taskInput: document.querySelector("#taskInput"),
   taskDueDate: document.querySelector("#taskDueDate"),
+  taskFlexibility: document.querySelector("#taskFlexibility"),
+  taskEstimatedMinutes: document.querySelector("#taskEstimatedMinutes"),
   taskHasTime: document.querySelector("#taskHasTime"),
   taskDueTime: document.querySelector("#taskDueTime"),
   taskSubmit: document.querySelector("#taskSubmit"),
@@ -988,6 +992,8 @@ function renderMyDay() {
     tasks.forEach((task) => {
       const row = document.createElement("article");
       row.className = `item-card${task.highlighted ? " highlighted-task" : ""}`;
+      const estimateLabel = formatTaskEstimate(task.estimatedMinutes);
+      const flexibilityLabel = getTaskFlexibilityLabel(task.flexibility);
       row.innerHTML = `
         <div class="card-title-row">
           <div class="task-row">
@@ -1003,6 +1009,11 @@ function renderMyDay() {
             </button>
             <input class="inline-date-picker hidden" type="date" data-action="reschedule-input">
           </div>
+        </div>
+        <div class="card-meta task-meta-line">
+          <span>${escapeHtml(flexibilityLabel)}</span>
+          ${estimateLabel ? `<span>${escapeHtml(estimateLabel)}</span>` : ""}
+          <span>${escapeHtml(getTaskListName(task.listId))}</span>
         </div>
       `;
       const checkbox = row.querySelector('input[type="checkbox"]');
@@ -1339,6 +1350,8 @@ function buildTaskCard(task, archived = false, options = {}) {
   card.className = `item-card${archived ? " archived" : ""}${task.highlighted ? " highlighted-task" : ""}`;
   const quickReschedule = Boolean(options.quickReschedule);
   const hasNotes = Boolean(stripHtml(task.notes || ""));
+  const flexibilityLabel = getTaskFlexibilityLabel(task.flexibility);
+  const estimateLabel = formatTaskEstimate(task.estimatedMinutes);
   card.innerHTML = `
     <div class="card-title-row">
       <div class="task-row">
@@ -1374,6 +1387,8 @@ function buildTaskCard(task, archived = false, options = {}) {
             <input class="inline-date-picker hidden" type="date" data-action="assign-task-date-input">
           </span>
         `}
+      <span>${escapeHtml(flexibilityLabel)}</span>
+      ${estimateLabel ? `<span>${escapeHtml(estimateLabel)}</span>` : ""}
       <span>${getTaskListName(task.listId)}</span>
     </div>
   `;
@@ -1652,6 +1667,8 @@ async function saveCapture(event) {
       title: interpretation.title,
       listId: targetListId,
       dueDate: interpretation.dueDate || "",
+      flexibility: "medium",
+      estimatedMinutes: 0,
       dueTime: interpretation.dueTime || "",
       done: false,
       sourcePrompt: text,
@@ -1868,6 +1885,8 @@ function addManualTask(event) {
     title,
     listId: elements.taskListSelect?.value || state.selectedTaskListId || state.taskLists[0].id,
     dueDate: elements.taskDueDate.value,
+    flexibility: normalizeTaskFlexibility(elements.taskFlexibility?.value),
+    estimatedMinutes: normalizeTaskEstimatedMinutes(elements.taskEstimatedMinutes?.value),
     dueTime: elements.taskHasTime.checked ? elements.taskDueTime.value : "",
   };
 
@@ -1884,6 +1903,8 @@ function addManualTask(event) {
         title: existingTask.title,
         dueDate: existingTask.dueDate || "",
         dueTime: existingTask.dueTime || "",
+        flexibility: existingTask.flexibility || "medium",
+        estimatedMinutes: existingTask.estimatedMinutes || 0,
         listId: existingTask.listId,
       },
       to: payload,
@@ -1947,6 +1968,8 @@ function addQuickTask(event) {
     title,
     listId: elements.quickTaskListSelect?.value || state.taskLists[0]?.id,
     dueDate: elements.quickTaskDueDate?.value || "",
+    flexibility: normalizeTaskFlexibility(elements.quickTaskFlexibility?.value),
+    estimatedMinutes: normalizeTaskEstimatedMinutes(elements.quickTaskEstimatedMinutes?.value),
     dueTime: elements.quickTaskHasTime?.checked ? (elements.quickTaskDueTime?.value || "") : "",
     notes: state.quickTaskDraftNote || "",
     done: false,
@@ -2040,6 +2063,12 @@ function editTask(id) {
     elements.taskListSelect.value = task.listId;
   }
   elements.taskDueDate.value = task.dueDate || "";
+  if (elements.taskFlexibility) {
+    elements.taskFlexibility.value = normalizeTaskFlexibility(task.flexibility);
+  }
+  if (elements.taskEstimatedMinutes) {
+    elements.taskEstimatedMinutes.value = task.estimatedMinutes ? String(task.estimatedMinutes) : "";
+  }
   elements.taskHasTime.checked = Boolean(task.dueTime);
   elements.taskDueTime.value = task.dueTime || "";
   syncTaskTimeField();
@@ -2053,6 +2082,12 @@ function resetTaskEditor() {
   elements.taskForm?.reset();
   if (elements.taskListSelect) {
     elements.taskListSelect.value = state.selectedTaskListId || state.taskLists[0]?.id || "";
+  }
+  if (elements.taskFlexibility) {
+    elements.taskFlexibility.value = "medium";
+  }
+  if (elements.taskEstimatedMinutes) {
+    elements.taskEstimatedMinutes.value = "";
   }
   syncTaskTimeField();
   syncTaskEditorState();
@@ -2136,6 +2171,12 @@ function resetQuickTaskComposer() {
   state.quickTaskDraftNote = "";
   if (elements.quickTaskListSelect) {
     elements.quickTaskListSelect.value = state.taskLists[0]?.id || "";
+  }
+  if (elements.quickTaskFlexibility) {
+    elements.quickTaskFlexibility.value = "medium";
+  }
+  if (elements.quickTaskEstimatedMinutes) {
+    elements.quickTaskEstimatedMinutes.value = "";
   }
   syncQuickTaskTimeField();
   syncQuickTaskNoteButton();
@@ -3347,8 +3388,8 @@ function clearAllData() {
 
 function seedDemoData() {
   state.tasks = [
-    { id: crypto.randomUUID(), title: "Follow up on pricing update", listId: state.taskLists[0].id, dueDate: todayString(), done: false, createdAt: new Date().toISOString() },
-    { id: crypto.randomUUID(), title: "Review workflow idea notes", listId: state.taskLists[0].id, dueDate: tomorrowString(), done: false, createdAt: new Date().toISOString() },
+    { id: crypto.randomUUID(), title: "Follow up on pricing update", listId: state.taskLists[0].id, dueDate: todayString(), flexibility: "none", estimatedMinutes: 30, done: false, createdAt: new Date().toISOString() },
+    { id: crypto.randomUUID(), title: "Review workflow idea notes", listId: state.taskLists[0].id, dueDate: tomorrowString(), flexibility: "high", estimatedMinutes: 90, done: false, createdAt: new Date().toISOString() },
   ];
   state.ideas = [
     { id: crypto.randomUUID(), title: "Workflow assistant for recurring follow-up", content: "Create a local-first assistant that captures loose thoughts and turns them into structured follow-up systems.", archived: false, createdAt: new Date().toISOString() },
@@ -5373,6 +5414,8 @@ function buildReplacementItemFromCorrection(source, targetType, sourcePrompt, co
       title: taskDraft.title,
       listId: correctionTaskList?.id || taskDraft.listId || source.item.listId || state.selectedTaskListId || state.taskLists[0].id,
       dueDate: taskDraft.dueDate || source.item.dueDate || source.item.callDate || "",
+      flexibility: source.type === "task" ? normalizeTaskFlexibility(source.item.flexibility) : "medium",
+      estimatedMinutes: source.type === "task" ? normalizeTaskEstimatedMinutes(source.item.estimatedMinutes) : 0,
       dueTime: taskDraft.dueTime || source.item.dueTime || "",
       done: false,
       notes: source.type === "task" ? source.item.notes || "" : "",
@@ -5573,7 +5616,19 @@ function getSelectedItem() {
   }
   if (state.selected.type === "task") {
     const task = state.tasks.find((item) => item.id === state.selected.id);
-    return task ? { title: task.title, content: task.done ? "This task is marked complete." : "This task is still open.", sectionLabel: "Task", meta: [formatTaskDue(task), getTaskListName(task.listId)] } : null;
+    return task
+      ? {
+        title: task.title,
+        content: task.done ? "This task is marked complete." : "This task is still open.",
+        sectionLabel: "Task",
+        meta: [
+          formatTaskDue(task),
+          getTaskFlexibilityLabel(task.flexibility),
+          ...(formatTaskEstimate(task.estimatedMinutes) ? [formatTaskEstimate(task.estimatedMinutes)] : []),
+          getTaskListName(task.listId),
+        ],
+      }
+      : null;
   }
   return null;
 }
@@ -5606,7 +5661,7 @@ function buildPrompts(item) {
   }
   return [
     { title: "Break it down", body: "Should this task be split into smaller steps?" },
-    { title: "Assign a date", body: "If this belongs in My Day later, give it a due date." },
+    { title: "Assign a due date", body: "If this belongs in My Day later, give it a due date." },
     { title: "Move lists if needed", body: "Would this be easier to find in a different task list?" },
   ];
 }
@@ -5617,7 +5672,7 @@ function getTasksForDate(date) {
 
 function getPastDueTasks() {
   const today = todayString();
-  return state.tasks.filter((task) => !task.done && task.dueDate && task.dueDate < today);
+  return state.tasks.filter((task) => !task.done && task.dueDate && task.dueDate < today && normalizeTaskFlexibility(task.flexibility) !== "high");
 }
 
 function getTaskListName(id) {
@@ -5629,6 +5684,40 @@ function formatTaskDue(task) {
     return "No date";
   }
   return task.dueTime ? `${formatDisplayDate(task.dueDate)} at ${formatTimeValue(task.dueTime)}` : formatDisplayDate(task.dueDate);
+}
+
+function normalizeTaskFlexibility(value) {
+  const normalized = String(value || "").toLowerCase().trim();
+  return normalized === "none" || normalized === "high" ? normalized : "medium";
+}
+
+function normalizeTaskEstimatedMinutes(value) {
+  const parsed = Number.parseInt(String(value || "").trim(), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function getTaskFlexibilityLabel(value) {
+  const normalized = normalizeTaskFlexibility(value);
+  if (normalized === "none") {
+    return "Hard due date";
+  }
+  if (normalized === "high") {
+    return "High flexibility";
+  }
+  return "Medium flexibility";
+}
+
+function formatTaskEstimate(minutes) {
+  const normalized = normalizeTaskEstimatedMinutes(minutes);
+  if (!normalized) {
+    return "";
+  }
+  if (normalized < 60) {
+    return `${normalized} min`;
+  }
+  const hours = Math.floor(normalized / 60);
+  const remainder = normalized % 60;
+  return remainder ? `${hours} hr ${remainder} min` : `${hours} hr`;
 }
 
 function formatTimeValue(value) {
@@ -6594,6 +6683,8 @@ function normalizeTasks(tasks, taskLists, defaultListId) {
       dueDate: task.dueDate || "",
       dueTime: task.dueTime || "",
       notes: typeof task.notes === "string" ? task.notes : "",
+      flexibility: normalizeTaskFlexibility(task.flexibility),
+      estimatedMinutes: normalizeTaskEstimatedMinutes(task.estimatedMinutes),
       highlighted: Boolean(task.highlighted),
     }))
     : [];
