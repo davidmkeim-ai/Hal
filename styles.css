@@ -2082,33 +2082,8 @@ body[data-theme="light"] .item-card {
     min-width: 0;
   }
 
-  .primary-grid > .stack-column:first-child,
-  .primary-grid > .stack-column:last-child {
-    display: contents;
-  }
-
-  .command-panel {
-    order: 1;
-  }
-
-  .my-day-widget {
-    order: 2;
-  }
-
-  .tasks-widget {
-    order: 3;
-  }
-
-  .meeting-widget {
-    order: 4;
-  }
-
-  .ideas-widget {
-    order: 5;
-  }
-
-  .quote-panel {
-    order: 6;
+  .stack-column.is-mobile-detached {
+    display: none;
   }
 
   .widget,

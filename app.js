@@ -68,6 +68,9 @@ const authDebug = {
 const appBoot = {
   started: false,
 };
+const mobileLayoutState = {
+  active: false,
+};
 const nativeFetch = window.fetch.bind(window);
 let editingReminderId = null;
 let editingTaskId = null;
@@ -93,6 +96,15 @@ const elements = {
   themeToggle: document.querySelector("#themeToggle"),
   quickLinks: document.querySelector("#quickLinks"),
   addQuickLink: document.querySelector("#addQuickLink"),
+  primaryGrid: document.querySelector(".primary-grid"),
+  firstStackColumn: document.querySelector(".primary-grid > .stack-column:first-child"),
+  secondStackColumn: document.querySelector(".primary-grid > .stack-column:last-child"),
+  commandPanel: document.querySelector(".command-panel"),
+  meetingWidget: document.querySelector(".meeting-widget"),
+  ideasWidget: document.querySelector(".ideas-widget"),
+  quotePanel: document.querySelector(".quote-panel"),
+  myDayWidget: document.querySelector(".my-day-widget"),
+  tasksWidget: document.querySelector(".tasks-widget"),
   quoteText: document.querySelector("#quoteText"),
   editQuote: document.querySelector("#editQuote"),
   openSecuritySettings: document.querySelector("#openSecuritySettings"),
@@ -320,6 +332,7 @@ function initialize() {
   syncTaskTimeField();
   syncQuickTaskTimeField();
   syncTaskEditorState();
+  syncMobileLayout();
   renderAccessState();
   void initializeAccess();
   try {
@@ -517,6 +530,7 @@ async function startAuthenticatedApp() {
 
 function bindEvents() {
   bindPasswordRevealButtons();
+  window.addEventListener("resize", syncMobileLayout);
   on(elements.authForm, "submit", submitAuthForm);
   on(elements.voiceToggle, "click", toggleVoiceResponses);
   on(elements.themeToggle, "click", toggleTheme);
@@ -635,6 +649,55 @@ function bindEvents() {
   elements.searchMicButtons.forEach((button) => {
     button.addEventListener("click", () => startFieldDictation(button.dataset.target));
   });
+}
+
+function syncMobileLayout() {
+  const { primaryGrid, firstStackColumn, secondStackColumn } = elements;
+  if (!primaryGrid || !firstStackColumn || !secondStackColumn) {
+    return;
+  }
+
+  const isMobile = window.innerWidth <= 760;
+  if (isMobile) {
+    firstStackColumn.classList.add("is-mobile-detached");
+    secondStackColumn.classList.add("is-mobile-detached");
+    [
+      elements.commandPanel,
+      elements.myDayWidget,
+      elements.tasksWidget,
+      elements.meetingWidget,
+      elements.ideasWidget,
+      elements.quotePanel,
+    ].forEach((node) => {
+      if (node) {
+        primaryGrid.appendChild(node);
+      }
+    });
+    mobileLayoutState.active = true;
+    return;
+  }
+
+  firstStackColumn.classList.remove("is-mobile-detached");
+  secondStackColumn.classList.remove("is-mobile-detached");
+  [
+    elements.commandPanel,
+    elements.meetingWidget,
+    elements.ideasWidget,
+  ].forEach((node) => {
+    if (node) {
+      firstStackColumn.appendChild(node);
+    }
+  });
+  [
+    elements.quotePanel,
+    elements.myDayWidget,
+    elements.tasksWidget,
+  ].forEach((node) => {
+    if (node) {
+      secondStackColumn.appendChild(node);
+    }
+  });
+  mobileLayoutState.active = false;
 }
 
 function render() {
