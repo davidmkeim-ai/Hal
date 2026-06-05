@@ -2158,9 +2158,33 @@ body[data-theme="light"] .item-card {
   }
 
   .widget-toolbar > *,
+  .dialog-header > *,
   .dialog-actions > *,
   .top-controls > * {
+    min-width: 0;
     max-width: 100%;
+  }
+
+  .dialog-header,
+  .dialog-actions,
+  .widget-toolbar-wrap {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .dialog-actions {
+    flex-wrap: wrap;
+  }
+
+  .tasks-dialog .dialog-header,
+  .tasks-dialog .dialog-actions,
+  .tasks-dialog .widget-toolbar {
+    align-items: stretch;
+  }
+
+  .tasks-dialog .dialog-actions > * {
+    flex: 1 1 140px;
   }
 
   .tasks-filter-row {
