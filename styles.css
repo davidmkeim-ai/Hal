@@ -1201,12 +1201,24 @@ body[data-theme="light"] .idea-editor-toolbar {
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .task-list-button {
   width: 100%;
   justify-content: flex-start;
   text-align: left;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.task-list-button span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 #toggleCompletedTasks {
@@ -1217,6 +1229,8 @@ body[data-theme="light"] .idea-editor-toolbar {
   margin-left: auto;
   font-size: 0.8rem;
   color: var(--muted);
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .icon-button {
@@ -2147,6 +2161,10 @@ body[data-theme="light"] .item-card {
   .task-dialog-form,
   .quick-task-form {
     grid-template-columns: 1fr;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
   }
 
   .task-form-inline > *,
@@ -2162,6 +2180,19 @@ body[data-theme="light"] .item-card {
   .quick-task-form .icon-toggle {
     width: 100%;
     height: 46px;
+  }
+
+  .tasks-widget,
+  #taskListsWidget,
+  .task-list-row,
+  .task-list-button {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .task-list-row {
+    grid-template-columns: 30px minmax(0, 1fr) 30px;
   }
 
   .task-card .card-title-row {
