@@ -2233,6 +2233,16 @@ body[data-theme="light"] .item-card {
     box-sizing: border-box;
   }
 
+  .tasks-dialog input,
+  .tasks-dialog select,
+  .tasks-dialog button,
+  .tasks-dialog label {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
   #taskListSelect,
   #taskInput,
   #taskDueDate,
@@ -2316,10 +2326,13 @@ body[data-theme="light"] .item-card {
 
   .reminders-dialog,
   .tasks-dialog {
-    width: min(100vw - 12px, 100%);
-    max-width: none;
+    width: calc(100vw - 20px);
+    max-width: calc(100vw - 20px);
+    min-width: 0;
     max-height: calc(100vh - 12px);
     margin: 6px;
+    padding: 14px;
     border-radius: 20px;
+    overflow-x: hidden;
   }
 }
