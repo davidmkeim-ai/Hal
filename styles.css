@@ -1816,8 +1816,11 @@ body[data-theme="light"] .item-card {
 }
 
 .task-card .task-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   min-width: 0;
   justify-content: flex-start;
+  align-items: start;
   gap: 10px;
 }
 
@@ -1825,6 +1828,7 @@ body[data-theme="light"] .item-card {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .task-card .card-actions {
@@ -1842,6 +1846,17 @@ body[data-theme="light"] .item-card {
 
 .task-card .card-meta {
   margin-top: 8px;
+}
+
+.task-meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.task-meta-line > * {
+  min-width: 0;
 }
 
 .card-title {
@@ -2176,6 +2191,23 @@ body[data-theme="light"] .item-card {
     justify-self: stretch;
   }
 
+  .task-form-inline input,
+  .task-form-inline select,
+  .task-form-inline button,
+  .task-form-inline label,
+  .task-dialog-form input,
+  .task-dialog-form select,
+  .task-dialog-form button,
+  .task-dialog-form label,
+  .quick-task-form input,
+  .quick-task-form select,
+  .quick-task-form button,
+  .quick-task-form label {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
   .task-form-inline .icon-toggle,
   .quick-task-form .icon-toggle {
     width: 100%;
@@ -2210,6 +2242,26 @@ body[data-theme="light"] .item-card {
 
   .task-card .card-actions {
     justify-content: flex-start;
+  }
+
+  .task-card .task-row span,
+  .task-meta-line {
+    white-space: normal;
+  }
+
+  .task-card .card-actions,
+  .task-card .card-meta,
+  .my-day-columns,
+  .my-day-column,
+  .primary-grid > *,
+  .card-list > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .card-list,
+  .compact-list {
+    overflow-x: hidden;
   }
 
   .reminders-dialog,
