@@ -72,6 +72,8 @@ html,
 body {
   margin: 0;
   min-height: 100%;
+  width: 100%;
+  overflow-x: hidden;
   background:
     radial-gradient(circle at top center, rgba(115, 220, 255, 0.07), transparent 24%),
     radial-gradient(circle at 60% 18%, rgba(255, 69, 69, 0.08), transparent 14%),
@@ -2016,6 +2018,8 @@ body[data-theme="light"] .item-card {
     grid-template-columns: 1fr;
     gap: 12px;
     padding: 10px;
+    width: 100%;
+    max-width: 100%;
   }
 
   .quick-links-panel {
@@ -2029,6 +2033,8 @@ body[data-theme="light"] .item-card {
     padding: 10px 12px;
     gap: 10px;
     overflow: hidden;
+    width: 100%;
+    max-width: 100%;
   }
 
   .brand-lockup {
@@ -2071,6 +2077,9 @@ body[data-theme="light"] .item-card {
   .stack-column,
   .primary-grid {
     gap: 12px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 
   .primary-grid > .stack-column:first-child,
@@ -2107,6 +2116,10 @@ body[data-theme="light"] .item-card {
   .command-panel,
   .reminders-dialog {
     padding: 14px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
   }
 
   .command-panel-header {
@@ -2137,6 +2150,13 @@ body[data-theme="light"] .item-card {
   .tasks-filter-row select {
     flex: 1 1 100%;
     width: 100%;
+    min-width: 0;
+  }
+
+  .widget-toolbar > *,
+  .dialog-actions > *,
+  .top-controls > * {
+    max-width: 100%;
   }
 
   .tasks-filter-row {
@@ -2171,6 +2191,15 @@ body[data-theme="light"] .item-card {
 
   .task-card .card-title-row {
     grid-template-columns: 1fr;
+  }
+
+  .task-card,
+  .item-card,
+  .card-list,
+  .compact-list {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 
   .task-card .card-actions {
