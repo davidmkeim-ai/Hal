@@ -1792,6 +1792,42 @@ body[data-theme="light"] .item-card {
   justify-content: space-between;
 }
 
+.task-card .card-title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+}
+
+.task-card .task-row {
+  min-width: 0;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.task-card .task-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-card .card-actions {
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.task-card .task-note-button {
+  white-space: nowrap;
+}
+
+.task-card .card-meta {
+  margin-top: 8px;
+}
+
 .card-title {
   margin: 0;
   font-size: 1rem;
@@ -1901,7 +1937,7 @@ body[data-theme="light"] .item-card {
 }
 
 .tasks-dialog {
-  width: min(820px, calc(100vw - 32px));
+  width: min(1040px, calc(100vw - 32px));
 }
 
 .reminders-dialog::backdrop {

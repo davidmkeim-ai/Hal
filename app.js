@@ -991,7 +991,7 @@ function renderMyDay() {
   } else {
     tasks.forEach((task) => {
       const row = document.createElement("article");
-      row.className = `item-card${task.highlighted ? " highlighted-task" : ""}`;
+      row.className = `item-card task-card${task.highlighted ? " highlighted-task" : ""}`;
       const estimateLabel = formatTaskEstimate(task.estimatedMinutes);
       const flexibilityLabel = getTaskFlexibilityLabel(task.flexibility);
       row.innerHTML = `
@@ -1347,7 +1347,7 @@ function renderTasksDialog() {
 
 function buildTaskCard(task, archived = false, options = {}) {
   const card = document.createElement("article");
-  card.className = `item-card${archived ? " archived" : ""}${task.highlighted ? " highlighted-task" : ""}`;
+  card.className = `item-card task-card${archived ? " archived" : ""}${task.highlighted ? " highlighted-task" : ""}`;
   const quickReschedule = Boolean(options.quickReschedule);
   const hasNotes = Boolean(stripHtml(task.notes || ""));
   const flexibilityLabel = getTaskFlexibilityLabel(task.flexibility);
