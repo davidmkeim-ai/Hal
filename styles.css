@@ -2186,6 +2186,7 @@ body[data-theme="light"] .item-card {
   .task-dialog-form > *,
   .quick-task-form > * {
     grid-column: 1 / -1 !important;
+    grid-row: auto !important;
     width: 100%;
     max-width: none;
     justify-self: stretch;
@@ -2215,6 +2216,9 @@ body[data-theme="light"] .item-card {
   }
 
   .tasks-widget,
+  .tasks-dialog .widget-toolbar,
+  .tasks-dialog .task-form-inline,
+  .tasks-dialog .card-list,
   #taskListsWidget,
   .task-list-row,
   .task-list-button {
