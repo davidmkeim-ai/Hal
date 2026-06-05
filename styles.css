@@ -2233,6 +2233,28 @@ body[data-theme="light"] .item-card {
     box-sizing: border-box;
   }
 
+  #taskListSelect,
+  #taskInput,
+  #taskDueDate,
+  #taskFlexibility,
+  #taskEstimatedMinutes,
+  #taskDueTime,
+  #taskSubmit,
+  #cancelTaskEdit,
+  #quickTaskListSelect,
+  #quickTaskInput,
+  #quickTaskDueDate,
+  #quickTaskFlexibility,
+  #quickTaskEstimatedMinutes,
+  #quickTaskDueTime,
+  #quickTaskSubmit,
+  #openQuickTaskNoteEditor,
+  #openTaskListCreator {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
   .task-form-inline .icon-toggle,
   .quick-task-form .icon-toggle {
     width: 100%;
