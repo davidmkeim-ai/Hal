@@ -2233,10 +2233,13 @@ body[data-theme="light"] .item-card {
     box-sizing: border-box;
   }
 
-  .tasks-dialog input,
-  .tasks-dialog select,
-  .tasks-dialog button,
-  .tasks-dialog label {
+  .tasks-dialog .widget-toolbar input,
+  .tasks-dialog .widget-toolbar select,
+  .tasks-dialog .widget-toolbar button,
+  .tasks-dialog .task-form-inline input,
+  .tasks-dialog .task-form-inline select,
+  .tasks-dialog .task-form-inline button,
+  .tasks-dialog .task-form-inline label {
     width: 100%;
     max-width: 100%;
     min-width: 0;
